@@ -5,7 +5,7 @@
 //  Created by Tomasz Kucharski on 18/03/2021.
 //
 
-function uiShowError(txt, duration = 5000) {
+function showError(txt, duration = 5000) {
     new Noty({
         text: txt,
         theme: 'metroui',
@@ -16,7 +16,7 @@ function uiShowError(txt, duration = 5000) {
     
 }
 
-function uiShowWarning(txt, duration = 5000) {
+function showWarning(txt, duration = 5000) {
     new Noty({
         text: txt,
         theme: 'metroui',
@@ -26,7 +26,7 @@ function uiShowWarning(txt, duration = 5000) {
     }).show();
 }
 
-function uiShowSuccess(txt, duration = 5000) {
+function showSuccess(txt, duration = 5000) {
     new Noty({
         text: txt,
         theme: 'metroui',
@@ -36,7 +36,7 @@ function uiShowSuccess(txt, duration = 5000) {
     }).show();
 }
 
-function uiShowInfo(txt, duration = 5000) {
+function showInfo(txt, duration = 5000) {
     new Noty({
         text: txt,
         theme: 'metroui',
