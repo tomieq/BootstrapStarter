@@ -13,7 +13,7 @@ public class JSResponse {
     public init() {}
 
     @discardableResult
-    public func add(code: CustomStringConvertible...) -> JSResponse {
+    public func add(_ code: CustomStringConvertible...) -> JSResponse {
         self.code.append(contentsOf: code)
         return self
     }
