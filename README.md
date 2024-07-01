@@ -43,6 +43,19 @@ do {
         template.assign("body", Template.load(relativePath: "templates/body.html"))
         return .ok(.html(template.output))
     }
+    server["run.js"] = { request, headers in
+        enum CustomCode: String, CustomStringConvertible {
+            var description: String { self.rawValue }
+            
+            case firstCode
+            case secondCode
+        }
+        let code = JSResponse {
+            CustomCode.firstCode
+            CustomCode.secondCode
+        }.add(CustomCode.firstCode)
+        return .ok(.js(code))
+    }
     server.notFoundHandler = { request, responseHeaders in
         // serve Bootstrap static files
         if let filePath = BootstrapTemplate.absolutePath(for: request.path),

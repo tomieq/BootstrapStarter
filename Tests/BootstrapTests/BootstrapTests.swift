@@ -18,4 +18,25 @@ final class BootstrapTests: XCTestCase {
         XCTAssertEqual(filename, "script")
         XCTAssertEqual(fileExtension, "js")
     }
+    
+    func testBuildingJSResponse() throws {
+        enum CustomCode: String, CustomStringConvertible {
+            var description: String { self.rawValue }
+            
+            case firstCode
+            case secondCode
+        }
+        let js = JSResponse(CustomCode.firstCode, CustomCode.secondCode).add {
+            CustomCode.firstCode
+            CustomCode.secondCode
+        }.add(CustomCode.firstCode)
+        
+        XCTAssertEqual(js.description, "firstCode\nsecondCode\nfirstCode\nsecondCode\nfirstCode")
+
+        let code = JSResponse {
+            CustomCode.firstCode
+            CustomCode.secondCode
+        }.add(CustomCode.firstCode)
+        XCTAssertEqual(code.description, "firstCode\nsecondCode\nfirstCode")
+    }
 }
