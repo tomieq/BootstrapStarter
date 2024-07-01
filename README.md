@@ -11,7 +11,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/tomieq/BootstrapStarter", branch: "master"),
         .package(url: "https://github.com/tomieq/swifter", branch: "develop"),
-        .package(url: "https://github.com/tomieq/Template.swift.git", exact: "1.3.1")
+        .package(url: "https://github.com/tomieq/Template.swift.git", exact: "1.4.0")
     ],
     targets: [
         .executableTarget(
