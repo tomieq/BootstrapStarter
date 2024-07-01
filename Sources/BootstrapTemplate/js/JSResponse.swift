@@ -14,6 +14,10 @@ public class JSResponse {
         self.code = code
     }
 
+    init(list: [CustomStringConvertible]) {
+        self.code = list
+    }
+
     public init(@SimpleStringBuilder makeCode: () -> [CustomStringConvertible]) {
         self.code = makeCode()
     }
@@ -49,7 +53,7 @@ struct SimpleStringBuilder {
 
 extension JSResponse {
     public convenience init(_ code: JSCode...) {
-        self.init(code)
+        self.init(list: code)
     }
     
     @discardableResult
