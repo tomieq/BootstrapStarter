@@ -1,7 +1,7 @@
 import Foundation
 
 public enum BootstrapTemplate {
-    public static func path(for filepath: String) -> String? {
+    public static func absolutePath(for filepath: String) -> String? {
         let (directory, filename, fileExtension) = Self.cut(filepath)
         return Bundle.module.path(forResource: filename, ofType: fileExtension, inDirectory: directory)
     }

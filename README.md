@@ -1,3 +1,62 @@
+### Swift Package Manager
+Sample webApp starter:
+```swift
+// swift-tools-version: 5.9
+// The swift-tools-version declares the minimum version of Swift required to build this package.
+
+import PackageDescription
+
+let package = Package(
+    name: "TempApp",
+    dependencies: [
+        .package(url: "https://github.com/tomieq/BootstrapStarter", branch: "master"),
+        .package(url: "https://github.com/tomieq/swifter", branch: "develop"),
+        .package(url: "https://github.com/tomieq/Template.swift.git", exact: "1.2.0")
+    ],
+    targets: [
+        .executableTarget(
+            name: "TempApp",
+            dependencies: [
+                .product(name: "BootstrapTemplate", package: "BootstrapStarter"),
+                .product(name: "Swifter", package: "Swifter"),
+                .product(name: "Template", package: "Template.swift")
+            ]),
+    ]
+)
+```
+## Quick starter
+```swift
+import Foundation
+import BootstrapTemplate
+import Template
+import Swifter
+import Dispatch
+
+
+do {
+    let template = Template.load(absolutePath: BootstrapTemplate.absolutePath(for: "templates/index.tpl.html")!)
+    let server = HttpServer()
+    server["/"] = { request, headers in
+        .ok(.html(template.output))
+    }
+    server.notFoundHandler = { request, responseHeaders in
+        // serve Bootstrap static files
+        if let filePath = BootstrapTemplate.absolutePath(for: request.path),
+            let response = HttpFileResponse.with(absolutePath: filePath, responseHeaders: responseHeaders) {
+            return response
+        }
+        let resourcePath = Resource().absolutePath(for: request.path)
+        if let response = HttpFileResponse.with(absolutePath: resourcePath, responseHeaders: responseHeaders) {
+            return response
+        }
+        return .notFound()
+    }
+    try server.start(8080)
+    dispatchMain()
+} catch {
+    print(error)
+}
+```
 ## Dockerize Swift app that uses SPM library with resources
 On macOS/iOS systems the resources are distributes as `bundle`. On linux sustems they are packed as `resources`.
 If you want dockerize your app, you need to copy the `resources`, which is tricky.
