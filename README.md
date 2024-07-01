@@ -46,11 +46,11 @@ do {
     server.notFoundHandler = { request, responseHeaders in
         // serve Bootstrap static files
         if let filePath = BootstrapTemplate.absolutePath(for: request.path),
-            let response = HttpFileResponse.with(absolutePath: filePath, responseHeaders: responseHeaders) {
+            let response = FileResponse.with(absolutePath: filePath, responseHeaders: responseHeaders) {
             return response
         }
         let resourcePath = Resource().absolutePath(for: request.path)
-        if let response = HttpFileResponse.with(absolutePath: resourcePath, responseHeaders: responseHeaders) {
+        if let response = FileResponse.with(absolutePath: resourcePath, responseHeaders: responseHeaders) {
             return response
         }
         return .notFound()
