@@ -1,5 +1,5 @@
 //
-//  JSLoader.swift
+//  JSCode.swift
 //
 //
 //  Created by Tomasz on 01/07/2024.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum JSLoader {
+public enum JSCode {
     case submitForm(path: String, domID: String)
     case loadHtml(path: String, domID: String)
     case loadJS(path: String)
@@ -15,13 +15,15 @@ public enum JSLoader {
     case loadHtmlAndJS(htmlPath: String, htmlDomID: String, jsPath: String)
     
     // notifications
-    case showSuccess(message: String)
-    case showError(message: String)
-    case showWarning(message: String)
-    case showInfo(message: String)
+    case showSuccess(String)
+    case showError(String)
+    case showWarning(String)
+    case showInfo(String)
+    
+    case custom(code: String)
 }
 
-extension JSLoader: CustomStringConvertible {
+extension JSCode: CustomStringConvertible {
     public var description: String {
         switch self {
         case .submitForm(let path, let domID):
@@ -42,6 +44,8 @@ extension JSLoader: CustomStringConvertible {
             "showWarning('\(message)');"
         case .showInfo(let message):
             "showInfo('\(message)');"
+        case .custom(let code):
+            code
         }
     }
 }

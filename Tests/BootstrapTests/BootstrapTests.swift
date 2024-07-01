@@ -39,4 +39,19 @@ final class BootstrapTests: XCTestCase {
         }.add(CustomCode.firstCode)
         XCTAssertEqual(code.description, "firstCode\nsecondCode\nfirstCode")
     }
+    
+    func testBuildingJSResponseFromJSCode() throws {
+
+        let js = JSResponse(
+            .showInfo("ok"),
+            .roll()
+        )
+            .add(.loadJS(path: ""), .loadHtml(path: "", domID: ""))
+    }
+}
+
+fileprivate extension JSCode {
+    static func roll() -> JSCode {
+        .custom(code: "roll();")
+    }
 }

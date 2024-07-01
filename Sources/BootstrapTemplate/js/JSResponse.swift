@@ -24,6 +24,7 @@ public class JSResponse {
         return self
     }
 
+    @discardableResult
     public func add(@SimpleStringBuilder makeCode: () -> [CustomStringConvertible]) -> JSResponse {
         self.code.append(contentsOf: makeCode())
         return self
@@ -43,5 +44,17 @@ struct SimpleStringBuilder {
     }
     static func buildArray(_ components: [CustomStringConvertible]) -> [CustomStringConvertible] {
         components
+    }
+}
+
+extension JSResponse {
+    public convenience init(_ code: JSCode...) {
+        self.init(code)
+    }
+    
+    @discardableResult
+    public func add(_ code: JSCode...) -> JSResponse {
+        self.code.append(contentsOf: code)
+        return self
     }
 }

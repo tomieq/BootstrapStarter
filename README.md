@@ -32,6 +32,12 @@ import Template
 import Swifter
 import Dispatch
 
+// easily extend JSCode
+extension JSCode {
+    static func roll(amount: Int) -> JSCode {
+        .custom(code: "roll(\(amount));")
+    }
+}
 
 do {
     var mainTemplate: Template {
@@ -58,9 +64,9 @@ do {
     }
     server["upload"]  = { request, headers in
         .ok(.js(JSResponse(
-            JSLoader.showSuccess(message: "Yeah!"),
-            JSLoader.showWarning(message: "Warning!"),
-            JSLoader.showInfo(message: "Info")
+            JSCode.showSuccess(message: "Yeah!"),
+            .showWarning(message: "Warning!"),
+            .roll(2) // custom static function in extension
         )))
     }
     server.notFoundHandler = { request, responseHeaders in
