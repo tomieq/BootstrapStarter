@@ -8,11 +8,17 @@
 import Foundation
 
 public class JSResponse {
-    public private(set) var code: [CustomStringConvertible] = []
+    private var code: [CustomStringConvertible] = []
 
     @discardableResult
     public func add(code: CustomStringConvertible...) -> JSResponse {
         self.code.append(contentsOf: code)
         return self
+    }
+}
+
+extension JSResponse: CustomStringConvertible {
+    public var description: String {
+        self.code.map{ $0.description }.joined(separator: "\n")
     }
 }
