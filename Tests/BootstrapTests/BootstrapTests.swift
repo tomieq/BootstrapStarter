@@ -13,5 +13,9 @@ final class BootstrapTests: XCTestCase {
         XCTAssertEqual(directory, "shared")
         XCTAssertEqual(filename, "ile")
         XCTAssertNil(fileExtension)
+        (directory, filename, fileExtension) = BootstrapTemplate.cut("/script.js")
+        XCTAssertEqual(directory, "shared")
+        XCTAssertEqual(filename, "script")
+        XCTAssertEqual(fileExtension, "js")
     }
 }

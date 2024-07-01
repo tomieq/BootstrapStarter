@@ -21,6 +21,7 @@ public enum BootstrapTemplate {
             filename = parts.dropLast().joined(separator: ".")
             fileExtension = parts.last!
         }
+        directory = directory.trimmingCharacters(in: CharacterSet(arrayLiteral: "/"))
         return (directory, filename, fileExtension)
     }
 }
