@@ -34,10 +34,14 @@ import Dispatch
 
 
 do {
-    let template = Template.load(absolutePath: BootstrapTemplate.absolutePath(for: "templates/index.tpl.html")!)
+    var mainTemplate: Template {
+        Template.load(absolutePath: BootstrapTemplate.absolutePath(for: "templates/index.tpl.html")!)
+    }
     let server = HttpServer()
     server["/"] = { request, headers in
-        .ok(.html(template.output))
+        let template = mainTemplate
+        template.assign("body", Template.load(relativePath: "templates/body.html"))
+        return .ok(.html(template.output))
     }
     server.notFoundHandler = { request, responseHeaders in
         // serve Bootstrap static files
