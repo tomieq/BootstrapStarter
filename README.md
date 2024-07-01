@@ -56,6 +56,13 @@ do {
         }.add(CustomCode.firstCode)
         return .ok(.js(code))
     }
+    server["upload"]  = { request, headers in
+        .ok(.js(JSResponse(
+            JSLoader.showSuccess(message: "Yeah!"),
+            JSLoader.showWarning(message: "Warning!"),
+            JSLoader.showInfo(message: "Info")
+        )))
+    }
     server.notFoundHandler = { request, responseHeaders in
         // serve Bootstrap static files
         if let filePath = BootstrapTemplate.absolutePath(for: request.path),
