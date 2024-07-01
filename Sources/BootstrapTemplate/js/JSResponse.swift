@@ -9,6 +9,8 @@ import Foundation
 
 public class JSResponse {
     private var code: [CustomStringConvertible] = []
+    
+    public init() {}
 
     @discardableResult
     public func add(code: CustomStringConvertible...) -> JSResponse {
