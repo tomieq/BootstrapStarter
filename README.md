@@ -47,7 +47,7 @@ do {
     server["/"] = { request, headers in
         let template = mainTemplate
         template.assign("body", Template.load(relativePath: "templates/body.html"))
-        return .ok(.html(template.output))
+        return .ok(.html(template))
     }
     server["run.js"] = { request, headers in
         enum CustomCode: String, CustomStringConvertible {
@@ -71,14 +71,11 @@ do {
     }
     server.notFoundHandler = { request, responseHeaders in
         // serve Bootstrap static files
-        if let filePath = BootstrapTemplate.absolutePath(for: request.path),
-            let response = FileResponse.with(absolutePath: filePath, responseHeaders: responseHeaders) {
-            return response
+        if let filePath = BootstrapTemplate.absolutePath(for: request.path) {
+            try HttpFileResponse.with(absolutePath: filePath)
         }
         let resourcePath = Resource().absolutePath(for: request.path)
-        if let response = FileResponse.with(absolutePath: resourcePath, responseHeaders: responseHeaders) {
-            return response
-        }
+        try HttpFileResponse.with(absolutePath: resourcePath)
         return .notFound()
     }
     try server.start(8080)
