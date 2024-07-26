@@ -3,6 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    [START meta]
+    <meta name="{name}" content="{value}" />
+    [END meta]
     <title>{title}</title>
     <link href="/bootstrap-5.3.1-dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/jquery-ui-1.13.3/jquery-ui.min.css" rel="stylesheet">
@@ -10,6 +13,11 @@
     [START css]
     <link href="{url}" rel="stylesheet">
     [END css]
+    <style>
+    [START csscode]
+    {code}
+    [END csscode]
+    </style>
   </head>
   <body>
     {body}
@@ -20,10 +28,13 @@
     <script src="/notifications.js"></script>
     <script src="/webPageUtils.js"></script>
     <script src="/webPageLoader.js"></script>
+    [START jsFile]
+    <script src="{url}"></script>
+    [END jsFile]
     <script>
-        [START script]
-        {code}
-        [END script]
+    [START script]
+    {code}
+    [END script]
     </script>
   </body>
 </html>
