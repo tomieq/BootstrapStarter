@@ -40,13 +40,10 @@ extension JSCode {
 }
 
 do {
-    var mainTemplate: Template {
-        Template.load(absolutePath: BootstrapTemplate.absolutePath(for: "templates/index.tpl.html")!)
-    }
     let server = HttpServer()
     server["/"] = { request, headers in
-        let template = mainTemplate
-        template.assign("body", Template.load(relativePath: "templates/body.html"))
+        let template = BootstrapTemplate()
+        template.body = Template.load(relativePath: "templates/body.html")
         return .ok(.html(template))
     }
     server["run.js"] = { request, headers in
