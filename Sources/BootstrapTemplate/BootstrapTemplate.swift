@@ -18,7 +18,7 @@ public class BootstrapTemplate {
     public var title: String? {
         set {
             guard let title = newValue else { return }
-            self.template.assign("title", title)
+            self.template["title"] = title
         }
         get {
             nil
@@ -28,7 +28,7 @@ public class BootstrapTemplate {
     public var body: CustomStringConvertible? {
         set {
             guard let body = newValue else { return }
-            self.template.assign("body", body)
+            self.template["body"] = body
         }
         get {
             nil
