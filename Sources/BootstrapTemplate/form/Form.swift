@@ -49,7 +49,7 @@ public class Form {
     }
     
     @discardableResult
-    public func addSeparator(txt: String) -> Form {
+    public func addSeparator(txt: CustomStringConvertible) -> Form {
         var variables = TemplateVariables()
         variables["label"] = txt
         variables["id"] = self.randomString(length: 10)
@@ -60,8 +60,8 @@ public class Form {
     }
     
     @discardableResult
-    public func addRaw(html: String) -> Form {
-        self.html.append(html)
+    public func addRaw(html: CustomStringConvertible) -> Form {
+        self.html.append(html.description)
         return self
     }
     
