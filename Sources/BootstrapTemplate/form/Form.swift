@@ -66,7 +66,7 @@ public class Form {
     }
     
     @discardableResult
-    public func addHidden(name: String, value: String) -> Form {
+    public func addHidden(name: String, value: CustomStringConvertible) -> Form {
         var variables = TemplateVariables()
         variables["name"] = name
         variables["value"] = value
@@ -77,7 +77,7 @@ public class Form {
     }
     
     @discardableResult
-    public func addCheckbox(name: String, value: String, label: String) -> Form {
+    public func addCheckbox(name: String, value: CustomStringConvertible, label: String) -> Form {
         var variables = TemplateVariables()
         variables["name"] = name
         variables["label"] = label
