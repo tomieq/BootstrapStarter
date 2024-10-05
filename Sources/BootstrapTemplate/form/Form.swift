@@ -118,12 +118,13 @@ public class Form {
     }
     
     @discardableResult
-    public func addTextarea(name: String, label: String, rows: Int = 3) -> Form {
+    public func addTextarea(name: String, label: String, value: String, rows: Int = 3) -> Form {
         var variables = TemplateVariables()
         variables["label"] = label
         variables["id"] = self.randomString(length: 10)
         variables["rows"] = "\(rows)"
         variables["name"] = name
+        variables["value"] = value
         self.template.assign(variables, inNest: "textarea")
         self.html.append(self.template.output)
         self.template.reset()
