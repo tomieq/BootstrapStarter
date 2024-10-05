@@ -35,16 +35,16 @@ public class BootstrapTemplate {
         }
     }
     
-    public func addJS(code: String) {
-        self.template.assign(["code":code], inNest: "script")
+    public func addJS(code: CustomStringConvertible) {
+        self.template.assign(["code":code.description], inNest: "script")
     }
     
     public func addJS(url: String) {
         self.template.assign(["url":url], inNest: "jsFile")
     }
     
-    public func addCSS(code: String) {
-        self.template.assign(["code":code], inNest: "csscode")
+    public func addCSS(code: CustomStringConvertible) {
+        self.template.assign(["code":code.description], inNest: "csscode")
     }
     
     public func addCSS(url: String) {
