@@ -14,21 +14,28 @@ public class Form {
     let method: String
     let url: String
     let ajax: Bool
+    let formAttributes: [String:String]
     
-    public init(url: String, method: String, ajax: Bool = false) {
+    public init(url: String, method: String, ajax: Bool = false, attributes: [String:String] = [:]) {
         self.method = method
         self.url = url
         self.ajax = ajax
+        self.formAttributes = attributes
         self.template = Template.cached(absolutePath: BootstrapTemplate.absolutePath(for: "templates/form.tpl.html")!)
         self.html = ""
     }
     
     @discardableResult
-    public func addPassword(name: String, label: String, placeholder: String = "") -> Form {
+    public func addPassword(name: String,
+                            label: String,
+                            id: String? = nil,
+                            placeholder: String = "",
+                            attributes: [String:String] = [:]) -> Form {
         var variables = TemplateVariables()
         variables["label"] = label
-        variables["id"] = self.randomString(length: 10)
+        variables["id"] = id ?? self.randomString(length: 10)
         variables["name"] = name
+        variables["attributes"] = makeAttributes(attributes)
         self.template.assign(variables, inNest: "password")
         self.html.append(self.template.output)
         self.template.reset()
@@ -36,12 +43,18 @@ public class Form {
     }
     
     @discardableResult
-    public func addInputText(name: String, label: String, value: String = "") -> Form {
+    public func addInputText(name: String,
+                             label: String,
+                             value: String = "",
+                             id: String? = nil,
+                             attributes: [String:String] = [:]) -> Form {
         var variables = TemplateVariables()
         variables["label"] = label
-        variables["id"] = self.randomString(length: 10)
+        variables["id"] = id ?? self.randomString(length: 10)
         variables["name"] = name
         variables["value"] = value
+        variables["attributes"] = makeAttributes(attributes)
+
         self.template.assign(variables, inNest: "text")
         self.html.append(self.template.output)
         self.template.reset()
@@ -66,10 +79,15 @@ public class Form {
     }
     
     @discardableResult
-    public func addHidden(name: String, value: String) -> Form {
+    public func addHidden(name: String,
+                          value: String,
+                          id: String? = nil,
+                          attributes: [String:String] = [:]) -> Form {
         var variables = TemplateVariables()
         variables["name"] = name
         variables["value"] = value
+        variables["id"] = id ?? self.randomString(length: 10)
+        variables["attributes"] = makeAttributes(attributes)
         self.template.assign(variables, inNest: "hidden")
         self.html.append(self.template.output)
         self.template.reset()
@@ -90,7 +108,11 @@ public class Form {
     }
     
     @discardableResult
-    public func addRadio(name: String, label: String, options: [FormRadioModel], checked: String? = nil, labelCSSClass: String = "") -> Form {
+    public func addRadio(name: String,
+                         label: String,
+                         options: [FormRadioModel],
+                         checked: String? = nil,
+                         labelCSSClass: String = "") -> Form {
         
         var radioHTML = ""
         options.forEach { option in
@@ -118,12 +140,17 @@ public class Form {
     }
     
     @discardableResult
-    public func addTextarea(name: String, label: String, rows: Int = 3) -> Form {
+    public func addTextarea(name: String,
+                            label: String,
+                            rows: Int = 3,
+                            id: String? = nil,
+                            attributes: [String:String] = [:]) -> Form {
         var variables = TemplateVariables()
         variables["label"] = label
-        variables["id"] = self.randomString(length: 10)
+        variables["id"] = id ?? self.randomString(length: 10)
         variables["rows"] = "\(rows)"
         variables["name"] = name
+        variables["attributes"] = makeAttributes(attributes)
         self.template.assign(variables, inNest: "textarea")
         self.html.append(self.template.output)
         self.template.reset()
@@ -131,7 +158,9 @@ public class Form {
     }
     
     @discardableResult
-    public func addSubmit(name: String, label: String, style: ButtonStyle...) -> Form {
+    public func addSubmit(name: String,
+                          label: String,
+                          style: ButtonStyle...) -> Form {
         var variables = TemplateVariables()
         variables["label"] = label
         variables["name"] = name
@@ -142,14 +171,21 @@ public class Form {
         return self
     }
     
+    private func makeAttributes(_ attributes: [String:String]) -> String {
+        attributes.map{ "\($0.key)=\"\($0.value)\"" }.joined(separator: " ")
+    }
+    
     public var output: String {
         var variables = TemplateVariables()
         variables["html"] = self.html
         variables["method"] = self.method
         variables["url"] = self.url
+        
+        var attributes = self.formAttributes
         if self.ajax {
-            variables["attributes"] = "onsubmit=\"event.preventDefault(); submitFormInBackground('\(url)', this);\""
+            attributes["onsubmit"] = "event.preventDefault(); submitFormInBackground('\(url)', this);"
         }
+        variables["attributes"] = makeAttributes(attributes)
         self.template.assign(variables, inNest: "form")
         return self.template.output
     }
