@@ -1,13 +1,13 @@
 //
-//  FormRadioModel.swift
+//  FormSelectModel.swift
+//  BootstrapStarter
 //
-//
-//  Created by Tomasz on 01/07/2024.
+//  Created by Tomasz on 27/11/2024.
 //
 
 import Foundation
 
-public struct FormRadioModel {
+public struct FormSelectModel {
     let label: CustomStringConvertible
     let value: CustomStringConvertible
     

@@ -113,8 +113,8 @@ public class Form {
     public func addRadio(name: String,
                          label: String,
                          options: [FormRadioModel],
-                         checked: String? = nil,
-                         labelCSSClass: String = "") -> Form {
+                         selected: CustomStringConvertible? = nil,
+                         attributes: [String:String] = [:]) -> Form {
         
         var radioHTML = ""
         options.forEach { option in
@@ -123,7 +123,7 @@ public class Form {
             variables["id"] = self.randomString(length: 10)
             variables["name"] = name
             variables["value"] = option.value
-            if checked == option.value {
+            if selected?.description == option.value.description {
                 variables["checked"] = "checked"
             }
             self.template.assign(variables, inNest: "radio")
@@ -133,9 +133,40 @@ public class Form {
         var variables = TemplateVariables()
         variables["label"] = label
         variables["id"] = self.randomString(length: 10)
-        variables["labelCSSClass"] = labelCSSClass
+        variables["attributes"] = makeAttributes(attributes)
         variables["inputHTML"] = radioHTML
         self.template.assign(variables, inNest: "label")
+        self.html.append(self.template.output)
+        self.template.reset()
+        return self
+    }
+    
+    
+    @discardableResult
+    public func addSelect(name: String,
+                          label: String,
+                          options: [FormSelectModel],
+                          selected: CustomStringConvertible? = nil,
+                          id: String? = nil,
+                          attributes: [String:String] = [:]) -> Form {
+        
+        var optionsHTML = ""
+        options.forEach { option in
+            var attr: [String:String] = [:]
+            attr["value"] = option.value.description
+            attr["id"] = id ?? self.randomString(length: 10)
+            if selected?.description == option.value.description {
+                attr["selected"] = "selected"
+            }
+            let option = "<option \(makeAttributes(attr))>\(option.label.description)</option>\n"
+            optionsHTML.append(option)
+        }
+        var variables = TemplateVariables()
+        variables["label"] = label
+        variables["id"] = id ?? self.randomString(length: 10)
+        variables["attributes"] = makeAttributes(attributes)
+        variables["options"] = optionsHTML
+        self.template.assign(variables, inNest: "select")
         self.html.append(self.template.output)
         self.template.reset()
         return self

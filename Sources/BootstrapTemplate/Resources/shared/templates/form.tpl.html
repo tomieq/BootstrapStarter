@@ -34,12 +34,20 @@
     [END textarea]
     [START radio]
     <div class="form-check">
-      <input class="form-check-input" type="radio" name="{name}" id="{id}" value="{value}" {checked}>
+      <input class="form-check-input" type="radio" name="{name}" id="{id}" value="{value} {attributes}" {checked}>
       <label class="form-check-label" for="{id}">
         {label}
       </label>
     </div>
     [END radio]
+    [START select]
+    <div class="mb-3">
+      <label for="{id}" class="form-label">{label}</label>
+      <select class="form-control" id="{id}" name="{name}" {attributes}>
+          {options}
+      </select>
+    </div>
+    [END select]
     [START checkbox]
       <div class="form-group form-check">
         <input type="checkbox" class="form-check-input" name="{name}" value="{value}" id="{id}">
