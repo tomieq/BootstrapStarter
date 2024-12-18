@@ -54,6 +54,10 @@ public class BootstrapTemplate {
     public func addMeta(name: String, value: String) {
         self.template.assign(["name":name, "value": value], inNest: "meta")
     }
+    
+    public func addFavicon(url: String, type: String) {
+        self.template.assign(["url": url, "type": type], inNest: "favicon")
+    }
 }
 
 extension BootstrapTemplate: CustomStringConvertible {
