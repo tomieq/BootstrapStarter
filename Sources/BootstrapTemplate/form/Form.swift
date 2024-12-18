@@ -163,6 +163,7 @@ public class Form {
         }
         var variables = TemplateVariables()
         variables["label"] = label
+        variables["name"] = name
         variables["id"] = id ?? self.randomString(length: 10)
         variables["attributes"] = makeAttributes(attributes)
         variables["options"] = optionsHTML
