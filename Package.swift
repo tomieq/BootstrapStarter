@@ -12,7 +12,7 @@ let package = Package(
             targets: ["BootstrapTemplate"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/tomieq/Template.swift.git", from: "1.5.1")
+        .package(url: "https://github.com/tomieq/Template.swift.git", from: "1.6.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
