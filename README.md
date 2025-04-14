@@ -94,7 +94,7 @@ let js = JSResponse(
     "rawCall();"
 )
 ```
-### `JSResponse.init()' with `@resultBuilder`
+### `JSResponse.init()` with `@resultBuilder`
 JSResponse implement `@resultBuilder` with `CustomStringConvertible` objects:
 ```swift
 let js = JSResponse {
@@ -109,7 +109,7 @@ let js = JSResponse {
     "reloadUI();"
 }
 ```
-### `JSResponse.add()' with `JSCode`, `CustomStringConvertible` and `@resultBuilder`
+### `JSResponse.add()` with `JSCode`, `CustomStringConvertible` and `@resultBuilder`
 Sometimes you don't 'know at the beginning which JavaScript code should be returned, 
 but rather you need to check for some conditions and build response in steps.
 For this purpose `JSResponse` offers `add()` function that can be used in multiple ways.
@@ -151,22 +151,42 @@ js.add {
 
 ### Form generation
 Library has `Form` object that allows building HTML forms.
+
 #### `<input>` text
 ```swift
 let form = Form(url: "go.html", method: "POST")
 form.addInputText(name: "name", label: "Your name")
-form.addSubmit(name: "go", label: "Wyślij", style: .danger)
+form.addSubmit(name: "go", label: "Upload", style: .danger)
 ```
 You can also provide default value, `id` or any custom attributes you want.
+
+#### `<input>` password
+```swift
+let form = Form(url: "go.html", method: "POST")
+form.addPassword(name: "password", label: "Password")
+form.addSubmit(name: "go", label: "Log in", style: .danger)
+```
+You can also provide placeholder, `id` or any custom attributes you want.
+
+#### `<textarea>`
+```swift
+let form = Form(url: "go.html", method: "POST")
+form.addTextarea(name: "content", label: "Your opinion")
+form.addSubmit(name: "go", label: "Upload", style: .danger)
+```
+You can also provide default value, `id`, number of rows or any oher custom attributes you want.
+
 #### `<select>`
 ```swift
 let form = Form(url: "go.html", method: "POST")
-form.addSelect(name: "meal", label: "Posiłek", options: [
+form.addSelect(name: "meal", label: "Did you like the meal?", options: [
     FormSelectModel(label: "Yes", value: "yes"),
     FormSelectModel(label: "No", value: "no")
 ], selected: "no")
 form.addSubmit(name: "go", label: "Upload", style: .danger)
 ```
+You can also provide default selected value, `id` or any custom attributes you want.
+
 #### `<radio>`
 ```swift
 let form = Form(url: "go.html", method: "POST")
@@ -176,8 +196,33 @@ form.addRadio(name: "transactionType",
                 FormRadioModel(label: "Visa", value: 0),
                 FormRadioModel(label: "MasterCard", value: 1)
               ])
-form.addSubmit(name: "go", label: "Wyślij", style: .danger)
+form.addSubmit(name: "go", label: "Upload", style: .danger)
 ```
+
+#### Checkbox
+```swift
+let form = Form(url: "go.html", method: "POST")
+form.addCheckbox(name: "privacyPolicy", value: 1, label: "I have read Privacy Policy")
+form.addSubmit(name: "go", label: "Upload", style: .danger)
+```
+You can specify custom `id`.
+
+#### `<input>` hidden
+```swift
+let form = Form(url: "go.html", method: "POST")
+form.addHidden(name: "productID", value: 7829643)
+form.addSubmit(name: "go", label: "Upload", style: .danger)
+```
+You can also set `id` or any custom attributes you want.
+
+#### Separator
+You can organise form with sections:
+```swift
+let form = Form(url: "go.html", method: "POST")
+form.addSeparator(txt: "Personal information")
+form.addSubmit(name: "go", label: "Upload", style: .danger)
+```
+You can also set `id` or any custom attributes you want.
 
 ### BootstrapTemplate
 `BootstrapTemplate` objects is the main page template that adds all needed styles and js files for using Bootstrap framework.

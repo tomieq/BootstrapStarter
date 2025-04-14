@@ -97,12 +97,13 @@ public class Form {
     @discardableResult
     public func addCheckbox(name: String,
                             value: CustomStringConvertible,
-                            label: String) -> Form {
+                            label: String,
+                            id: String? = nil) -> Form {
         var variables = TemplateVariables()
         variables["name"] = name
         variables["label"] = label
         variables["value"] = value
-        variables["id"] = self.randomString(length: 10)
+        variables["id"] = id ?? self.randomString(length: 10)
         self.template.assign(variables, inNest: "checkbox")
         self.html.append(self.template.output)
         self.template.reset()
