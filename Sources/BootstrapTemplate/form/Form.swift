@@ -98,12 +98,16 @@ public class Form {
     public func addCheckbox(name: String,
                             value: CustomStringConvertible,
                             label: String,
-                            id: String? = nil) -> Form {
+                            id: String? = nil,
+                            selected: Bool = false) -> Form {
         var variables = TemplateVariables()
         variables["name"] = name
         variables["label"] = label
         variables["value"] = value
         variables["id"] = id ?? self.randomString(length: 10)
+        if selected {
+            variables["checked"] = "checked"
+        }
         self.template.assign(variables, inNest: "checkbox")
         self.html.append(self.template.output)
         self.template.reset()

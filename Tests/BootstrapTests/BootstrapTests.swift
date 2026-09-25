@@ -2,6 +2,16 @@ import XCTest
 @testable import BootstrapTemplate
 
 final class BootstrapTests: XCTestCase {
+    func testCheckboxSelectedState() {
+        let selectedCheckbox = Form(url: "/", method: "POST")
+            .addCheckbox(name: "terms", value: "accepted", label: "Terms", id: "terms", selected: true)
+        let unselectedCheckbox = Form(url: "/", method: "POST")
+            .addCheckbox(name: "terms", value: "accepted", label: "Terms", id: "terms")
+
+        XCTAssertTrue(selectedCheckbox.output.contains("id=\"terms\" checked>"))
+        XCTAssertFalse(unselectedCheckbox.output.contains("id=\"terms\" checked>"))
+    }
+
     func testCutFilepath() throws {
         var (directory, filename, fileExtension) = BootstrapTemplate.cut("/res/bootstrap/css/file.js")
         XCTAssertEqual(directory, "shared/res/bootstrap/css")

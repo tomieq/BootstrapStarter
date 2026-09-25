@@ -173,7 +173,7 @@ let form = Form(
         ],
         selected: "pro"
     )
-    .addCheckbox(name: "terms", value: "accepted", label: "I accept the terms")
+    .addCheckbox(name: "terms", value: "accepted", label: "I accept the terms", selected: true)
     .addSubmit(name: "save", label: "Save", style: .primary, .large)
 
 let formHTML = form.output
@@ -200,7 +200,7 @@ Form(url: String, method: String, ajax: Bool = false, attributes: [String: Strin
 | `addPassword(name:label:id:placeholder:attributes:)` | Adds a password input. `placeholder` defaults to `""`. |
 | `addHidden(name:value:id:attributes:)` | Adds a hidden input; `value` accepts any `CustomStringConvertible`. |
 | `addTextarea(name:label:rows:value:id:attributes:)` | Adds a textarea; `rows` defaults to `3`. |
-| `addCheckbox(name:value:label:id:)` | Adds a checkbox. This method has no custom-attributes parameter. |
+| `addCheckbox(name:value:label:id:selected:)` | Adds a checkbox. Set `selected: true` to render it checked. This method has no custom-attributes parameter. |
 | `addRadio(name:label:options:selected:attributes:)` | Adds a labelled radio group. `selected` is matched by its `description`. |
 | `addSelect(name:label:options:selected:id:attributes:)` | Adds a select element. `selected` is matched by its `description`. |
 | `addSubmit(name:label:style:)` | Adds a submit button. Omitting `style` uses `.primary`. |
