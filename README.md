@@ -2,7 +2,7 @@
 
 `BootstrapStarter` is a server-side Swift library for producing Bootstrap-backed HTML pages, Bootstrap-styled forms, and JavaScript command responses. Its library product is named `BootstrapTemplate`.
 
-It bundles Bootstrap 5.3.1, jQuery 3.6.1, jQuery UI 1.13.3, Noty, and small browser-side helpers. The package itself depends on [Template.swift](https://github.com/tomieq/Template.swift) 1.6.0 or later.
+It bundles Bootstrap 5.3.1, Bootstrap Icons 1.13.1, jQuery 3.6.1, jQuery UI 1.13.3, Noty, and small browser-side helpers. The package itself depends on [Template.swift](https://github.com/tomieq/Template.swift) 1.6.0 or later.
 
 ## Contents
 
@@ -15,6 +15,7 @@ It bundles Bootstrap 5.3.1, jQuery 3.6.1, jQuery UI 1.13.3, Noty, and small brow
 - [Build tables](#build-tables)
 - [Paginate](#paginate)
 - [Modals](#modals)
+- [Icons](#icons)
 - [Escape HTML and JavaScript](#escape-html-and-javascript)
 - [Compose JavaScript responses](#compose-javascript-responses)
 - [Public API reference](#public-api-reference)
@@ -61,6 +62,7 @@ The package does not require a specific HTTP framework. The examples use Swifter
 | `BootstrapTemplate` | Full HTML document with bundled CSS and scripts | `CustomStringConvertible` |
 | `Form` | Bootstrap-styled HTML form builder | `CustomStringConvertible` |
 | `Button` | Bootstrap button or link-button | `CustomStringConvertible` |
+| `Icon` | Bootstrap Icons glyph | `CustomStringConvertible` |
 | `Table` | Bootstrap table builder | `CustomStringConvertible` |
 | `Pagination` | Bootstrap page navigation | `CustomStringConvertible` |
 | `Modal` | Bootstrap modal dialog | `CustomStringConvertible` |
@@ -227,7 +229,7 @@ Form(url: String, method: String, ajax: Bool = false, attributes: [String: Strin
 | `addCheckbox(name:value:label:id:selected:)` | Adds a checkbox. Set `selected: true` to render it checked. This method has no custom-attributes parameter. |
 | `addRadio(name:label:options:selected:attributes:)` | Adds a labelled radio group. `selected` is matched by its `description`. |
 | `addSelect(name:label:options:selected:id:attributes:)` | Adds a select element. `selected` is matched by its `description`. |
-| `addSubmit(name:label:style:)` | Adds a submit button. Omitting `style` uses `.primary`. |
+| `addSubmit(name:label:icon:style:)` | Adds a submit button, optionally with an [`Icon`](#icons) before the label. Omitting `style` uses `.primary`. |
 | `addSeparator(txt:)` | Adds a labelled section wrapper. |
 | `addRaw(html:)` | Appends HTML verbatim. |
 
@@ -257,7 +259,7 @@ Button("Delete", onClick: .loadHtml(path: "/users/1/delete", domID: "#modal"), s
 Button("Open", url: "/users/1", attributes: ["title": "Details"], style: .success) // <a class="btn ..." role="button">
 ```
 
-A button renders with `type="button"`; use `Form.addSubmit` for submit buttons. Pass it to `Form.addRaw(html:)`, a page body, or `TableCell(_:)`.
+A button renders with `type="button"`; use `Form.addSubmit` for submit buttons. Pass it to `Form.addRaw(html:)`, a page body, or `TableCell(_:)`. `icon:` puts an [`Icon`](#icons) before the label; with an empty label the button is icon-only, so add `attributes: ["aria-label": "Delete"]`.
 
 ## Build tables
 
@@ -368,6 +370,27 @@ Button("Delete",
 - Defaults: title `"Confirm"`, labels `"OK"` and `"Cancel"`.
 - Opening a new confirmation replaces a pending one.
 
+## Icons
+
+`Icon` renders a [Bootstrap Icons](https://icons.getbootstrap.com/) glyph as `<i class="bi bi-trash" aria-hidden="true"></i>`. The library bundles a pinned snapshot (v1.13.1: stylesheet, `woff2`/`woff` fonts and the MIT license) under `bootstrap-icons-1.13.1/`, so it does not change when upstream does. Icons are opt-in: call `addIcons()` on the page to load the stylesheet, and keep serving the bundled assets (the fonts are requested relative to the stylesheet).
+
+```swift
+page.addIcons()
+
+Icon.trash                                          // curated, typed
+Icon("airplane-fill")                               // any icon of the snapshot by name
+Icon("star-fill", cssClass: "fs-4 text-warning", label: "Favorite")
+
+Button("Delete", icon: .trash, onClick: .loadModal(path: "/users/1/delete"), style: .danger, .small)
+Button("", icon: .edit, attributes: ["aria-label": "Edit"], style: .secondary, .small)
+TableCell(Icon.check, alignment: .center)
+```
+
+- Curated constants (64): `.plus .minus .close .check .edit .editSquare .trash .search .filter .refresh .copy .share .print .download .upload .view .hide .settings`, navigation (`.home .menu .more .moreVertical .arrowLeft/.arrowRight/.arrowUp/.arrowDown .chevronLeft/.chevronRight/.chevronUp/.chevronDown .link .externalLink .login .logout`), status (`.info .warning .error .success .question`) and objects (`.person .people .personAdd .mail .bell .calendar .clock .star .starFill .heart .bookmark .tag .folder .file .document .image .lock .unlock .key .shield .cart .chart .moon .sun`).
+- Any other name from the snapshot works through `Icon("name")` or a string literal. Names are not checked at runtime; an unknown name renders an empty glyph. Add your own constants with `extension Icon { static let logo = Icon("airplane") }`.
+- `cssClass` adds utility classes (`fs-4`, `text-danger`). Without `label` the icon is decorative (`aria-hidden`); with `label` it gets `role="img"` and `aria-label`.
+- `TableCell(Icon)` inserts the icon; `TableCell(_ text:)` would escape its markup.
+
 ## Escape HTML and JavaScript
 
 `String.htmlEscaped` is public. It replaces `&`, `<`, `>`, `"` and `'`, making a value safe in HTML text and quoted attribute values. Use it for any untrusted value placed into templates, `Form.addRaw(html:)` or `TableCell.raw(_:)`.
@@ -476,6 +499,7 @@ public class BootstrapTemplate: CustomStringConvertible {
     public func addCSS(url: String)
     public func addMeta(name: String, value: String)
     public func addFavicon(url: String, type: String)
+    public func addIcons()
     public static func absolutePath(for filepath: String) -> String?
 }
 
@@ -505,6 +529,7 @@ public class Form: CustomStringConvertible {
         rows: Int = 3, value: CustomStringConvertible? = nil, id: String? = nil,
         attributes: [String: String] = [:]) -> Form
     @discardableResult public func addSubmit(name: String, label: String,
+        icon: Icon? = nil,
         style: ButtonStyle...) -> Form
     public var output: String { get }
 }
@@ -551,11 +576,18 @@ public enum ButtonStyle: String, CustomStringConvertible {
 }
 
 public struct Button: CustomStringConvertible {
-    public init(_ label: String, onClick: JSCode? = nil,
+    public init(_ label: String, icon: Icon? = nil, onClick: JSCode? = nil,
                 attributes: [String: String] = [:], style: ButtonStyle...)
-    public init(_ label: String, url: String,
+    public init(_ label: String, icon: Icon? = nil, url: String,
                 attributes: [String: String] = [:], style: ButtonStyle...)
     public var output: String { get }
+}
+
+public struct Icon: ExpressibleByStringLiteral, CustomStringConvertible {
+    public let name: String
+    public init(_ name: String, cssClass: String? = nil, label: String? = nil)
+    public var output: String { get }
+    // static constants: .plus, .trash, .edit, ... (see Icons)
 }
 
 public class Table: CustomStringConvertible {
@@ -574,6 +606,7 @@ public struct TableColumn: ExpressibleByStringLiteral {
 public struct TableCell: ExpressibleByStringLiteral {
     public init(_ text: CustomStringConvertible, alignment: TableAlignment? = nil)
     public init(_ button: Button, alignment: TableAlignment? = nil)
+    public init(_ icon: Icon, alignment: TableAlignment? = nil)
     public static func raw(_ html: CustomStringConvertible, alignment: TableAlignment? = nil) -> TableCell
     public static func link(_ label: String, url: String, alignment: TableAlignment? = nil) -> TableCell
 }
@@ -634,7 +667,7 @@ Properties not shown as public in this list are implementation details. In parti
 When modifying an application that uses this package:
 
 1. Import `BootstrapTemplate`, not the repository name.
-2. Treat `BootstrapTemplate`, `Form`, `Button`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `ConfirmDialog`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
+2. Treat `BootstrapTemplate`, `Form`, `Button`, `Icon`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `ConfirmDialog`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
 3. Preserve static serving for `BootstrapTemplate.absolutePath(for:)`; without it, every generated page is missing its bundled CSS and JavaScript.
 4. Use a CSS selector such as `"#content"` for `JSCode.loadHtml` and `JSCode.loadHtmlAndJS` target arguments.
 5. Prefer explicit form IDs when any client code needs to select fields. Generated IDs are intentionally non-deterministic.

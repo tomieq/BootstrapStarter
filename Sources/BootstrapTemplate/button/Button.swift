@@ -11,15 +11,19 @@ public struct Button {
     }
 
     private let label: String
+    private let icon: Icon?
     private let kind: Kind
     private let styles: [ButtonStyle]
     private let attributes: [String: String]
 
+    // Without a label the button is icon-only; give it `attributes: ["aria-label": ...]`.
     public init(_ label: String,
+                icon: Icon? = nil,
                 onClick: JSCode? = nil,
                 attributes: [String: String] = [:],
                 style: ButtonStyle...) {
         self.label = label
+        self.icon = icon
         self.kind = .button(onClick: onClick)
         self.styles = style
         self.attributes = attributes
@@ -27,13 +31,21 @@ public struct Button {
 
     // Renders an <a> element styled as a button.
     public init(_ label: String,
+                icon: Icon? = nil,
                 url: String,
                 attributes: [String: String] = [:],
                 style: ButtonStyle...) {
         self.label = label
+        self.icon = icon
         self.kind = .link(url: url)
         self.styles = style
         self.attributes = attributes
+    }
+
+    private var content: String {
+        let text = self.label.htmlEscaped
+        guard let icon else { return text }
+        return text.isEmpty ? icon.output : "\(icon.output) \(text)"
     }
 
     private var cssClass: String {
@@ -54,9 +66,9 @@ public struct Button {
         switch self.kind {
         case .button(let onClick):
             let handler = onClick.map { " onclick=\"\($0.description.htmlEscaped)\"" } ?? ""
-            return "<button type=\"button\" class=\"\(self.cssClass)\"\(handler)\(self.extraAttributes)>\(self.label.htmlEscaped)</button>"
+            return "<button type=\"button\" class=\"\(self.cssClass)\"\(handler)\(self.extraAttributes)>\(self.content)</button>"
         case .link(let url):
-            return "<a href=\"\(url.htmlEscaped)\" class=\"\(self.cssClass)\" role=\"button\"\(self.extraAttributes)>\(self.label.htmlEscaped)</a>"
+            return "<a href=\"\(url.htmlEscaped)\" class=\"\(self.cssClass)\" role=\"button\"\(self.extraAttributes)>\(self.content)</a>"
         }
     }
 }

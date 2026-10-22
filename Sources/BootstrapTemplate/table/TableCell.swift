@@ -35,6 +35,11 @@ public struct TableCell {
         self.alignment = alignment
     }
 
+    public init(_ icon: Icon, alignment: TableAlignment? = nil) {
+        self.html = icon.output
+        self.alignment = alignment
+    }
+
     private init(html: String, alignment: TableAlignment?) {
         self.html = html
         self.alignment = alignment

@@ -201,9 +201,10 @@ public class Form {
     @discardableResult
     public func addSubmit(name: String,
                           label: String,
+                          icon: Icon? = nil,
                           style: ButtonStyle...) -> Form {
         var variables = TemplateVariables()
-        variables["label"] = label
+        variables["label"] = icon.map { label.isEmpty ? $0.output : "\($0.output) \(label)" } ?? label
         variables["name"] = name
         variables["cssClass"] = style.isEmpty ? ButtonStyle.primary : style.map { $0.cssClass }.joined(separator: " ")
         self.template.assign(variables, inNest: "submit")

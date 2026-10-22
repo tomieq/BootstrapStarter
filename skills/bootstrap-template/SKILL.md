@@ -5,7 +5,7 @@ description: "Use when writing or reviewing Swift code in a project that depends
 
 # BootstrapTemplate
 
-Server-side Swift library for building Bootstrap 5 web applications. Package name: `BootstrapStarter`, library product: `BootstrapTemplate`. It bundles Bootstrap 5.3.1, jQuery 3.6.1, jQuery UI 1.13.3, Noty (notifications) and small JS helpers.
+Server-side Swift library for building Bootstrap 5 web applications. Package name: `BootstrapStarter`, library product: `BootstrapTemplate`. It bundles Bootstrap 5.3.1, Bootstrap Icons 1.13.1, jQuery 3.6.1, jQuery UI 1.13.3, Noty (notifications) and small JS helpers.
 
 It is built on top of [Template.swift](https://github.com/tomieq/Template.swift) (module `Template`), which is used for the page skeleton and for your own HTML fragments. It is HTTP-framework neutral; the samples below use [Swifter](https://github.com/tomieq/swifter). For details on those libraries load the `template-swift-usage` and `swifter` skills if available.
 
@@ -16,6 +16,7 @@ It is built on top of [Template.swift](https://github.com/tomieq/Template.swift)
 | `JSCode` / `JSResponse` | JavaScript commands returned to the browser |
 | `Table` / `TableCell` / `TableColumn` | Bootstrap table builder |
 | `Button` | Bootstrap button or link-button, usable anywhere |
+| `Icon` | Bootstrap Icons glyph (pinned bundled snapshot; opt-in via `page.addIcons()`) |
 | `Pagination` | Bootstrap page navigation |
 | `Modal` | Bootstrap modal dialog |
 | `ConfirmDialog` | Client-side confirmation dialog (used via `JSCode.confirm`) |
@@ -157,7 +158,7 @@ let form = Form(url: "/account", method: "POST", attributes: ["id": "accountForm
 ```
 
 - `Form(url:method:ajax:attributes:)`; `attributes` land on the `<form>` tag (use it to set the form `id`).
-- Methods: `addInputText`, `addPassword`, `addHidden`, `addTextarea`, `addCheckbox`, `addRadio`, `addSelect`, `addSubmit`, `addSeparator`, `addRaw(html:)`.
+- Methods: `addInputText`, `addPassword`, `addHidden`, `addTextarea`, `addCheckbox`, `addRadio`, `addSelect`, `addSubmit(name:label:icon:style:)` (optional `Icon` before the label, e.g. `icon: .check`), `addSeparator`, `addRaw(html:)`.
 - Always pass explicit `id:` for fields your JS touches; omitted ids are random 10-char strings.
 - `ButtonStyle`: `.primary` (default), `.secondary`, `.success`, `.danger`, `.warning`, `.info`, `.light`, `.dark`, `.link`, `.large`, `.small` (combinable).
 - Known quirks: `addPassword` placeholder is not rendered; `addCheckbox` takes no custom attributes; `addRadio` attributes go to the wrapper.
@@ -174,6 +175,24 @@ Button("Open", url: "/users/1", attributes: ["title": "Details"], style: .succes
 - `style:` is variadic and last; colors and sizes combine. `.primary` is added when no color is given.
 - Renders `type="button"`; `Form.addSubmit` is still the way to add a submit button.
 - Use it as `Form.addRaw(html: button)`, `page.body`, or `TableCell(button)`.
+- `icon:` puts an `Icon` before the label (`Button("Delete", icon: .trash, ...)`); an empty label makes it icon-only, so pass `attributes: ["aria-label": "Delete"]`.
+
+## Icon
+
+`Icon` renders `<i class="bi bi-trash" aria-hidden="true"></i>` from a pinned Bootstrap Icons 1.13.1 snapshot bundled in the package (CSS, woff2/woff fonts, MIT license). Opt-in: call `page.addIcons()` to load the stylesheet; the bundled assets must be served (fonts are requested relative to the stylesheet).
+
+```swift
+page.addIcons()
+Icon.trash                                   // curated constant
+Icon("airplane-fill")                        // any icon name from the snapshot (also a string literal)
+Icon("star-fill", cssClass: "fs-4 text-warning", label: "Favorite")   // label => role=img + aria-label
+Button("Delete", icon: .trash, style: .danger, .small)
+TableCell(Icon.check, alignment: .center)
+```
+
+- 64 curated constants: actions (`.plus .minus .close .check .edit .editSquare .trash .search .filter .refresh .copy .share .print .download .upload .view .hide .settings`), navigation (`.home .menu .more .moreVertical .arrowLeft/.arrowRight/.arrowUp/.arrowDown .chevronLeft/.chevronRight/.chevronUp/.chevronDown .link .externalLink .login .logout`), status (`.info .warning .error .success .question`), objects (`.person .people .personAdd .mail .bell .calendar .clock .star .starFill .heart .bookmark .tag .folder .file .document .image .lock .unlock .key .shield .cart .chart .moon .sun`).
+- Names are not validated at runtime; an unknown name shows an empty glyph. Add own constants with `extension Icon { static let logo = Icon("airplane") }`.
+- `TableCell(Icon)` inserts the icon (`TableCell(_ text:)` would escape the markup).
 
 ## Table
 

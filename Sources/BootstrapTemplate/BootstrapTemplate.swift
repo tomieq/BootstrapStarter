@@ -10,6 +10,7 @@ import Template
 
 public class BootstrapTemplate {
     public let template: Template
+    private var iconsAdded = false
     
     public init() {
         self.template = Template.cached(absolutePath: BootstrapTemplate.absolutePath(for: "templates/index.tpl.html")!)
@@ -56,6 +57,13 @@ public class BootstrapTemplate {
     
     public func addCSS(code: CustomStringConvertible) {
         self.template.assign(["code":code.description], inNest: "csscode")
+    }
+    
+    // Opt-in: loads the bundled Bootstrap Icons stylesheet needed by `Icon`.
+    public func addIcons() {
+        guard !self.iconsAdded else { return }
+        self.iconsAdded = true
+        self.addCSS(url: "/bootstrap-icons-1.13.1/bootstrap-icons.min.css")
     }
     
     public func addCSS(url: String) {
