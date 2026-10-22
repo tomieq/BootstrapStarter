@@ -166,6 +166,23 @@ let form = Form(url: "/account", method: "POST", attributes: ["id": "accountForm
 - `ButtonStyle`: `.primary` (default), `.secondary`, `.success`, `.danger`, `.warning`, `.info`, `.light`, `.dark`, `.link`, `.large`, `.small` (combinable).
 - Known quirks: `addPassword` placeholder is not rendered; `addCheckbox` takes no custom attributes; `addRadio` attributes go to the wrapper.
 
+### Date/time, autocomplete, dependent selects
+
+```swift
+Form(url: "/booking", method: "POST", ajax: true)
+    .addDate(name: "day", label: "Day", value: "2026-10-22", min: "2026-10-01", id: "day")      // yyyy-MM-dd
+    .addTime(name: "at", label: "Start", value: "09:30", id: "at")                                  // HH:mm
+    .addDateTime(name: "deadline", label: "Deadline", id: "deadline")                              // yyyy-MM-dd'T'HH:mm
+    .addAutocomplete(name: "city", label: "City", source: "/cities/suggest", minLength: 2, id: "city")
+    .addSelect(name: "country", label: "Country", options: countries, id: "country")
+    .addDependentSelect(name: "region", label: "Region", dependsOn: "country", optionsPath: "/regions",
+                        options: regions(for: "pl"), id: "region")
+```
+
+- `addDate/addTime/addDateTime` are native HTML5 inputs (no JS, ISO values, `min`/`max` params, empty = `""`); decode as optional String.
+- `addAutocomplete`: jQuery UI autocomplete bound on first focus (works in modals/tabs/fragments). The endpoint gets `?term=<text>` and returns JSON: array of strings or of `{label, value}`. The field stays free text.
+- `addDependentSelect`: when the field with id `dependsOn` changes, GET `optionsPath?<parentName>=<value>` and replace the options with the response. The endpoint must return `<option>` elements: `.ok(.html(FormSelectModel.optionsHTML(options)))`. The select is disabled while loading, keeps its value if still present, fires `change` (chains work if each level has an explicit `id`), only the latest request applies, errors show a toast. Initial options come from `options:`; nothing loads until the parent changes. The parent field needs an explicit `id`.
+
 ## Button
 
 `Button` is a value type that renders to HTML (`CustomStringConvertible`, `.output`). Label, URL, `onClick` code and attribute values are HTML-escaped.

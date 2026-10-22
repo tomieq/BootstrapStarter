@@ -234,11 +234,73 @@ Form(url: String, method: String, ajax: Bool = false, attributes: [String: Strin
 | `addCheckbox(name:value:label:id:selected:)` | Adds a checkbox. Set `selected: true` to render it checked. This method has no custom-attributes parameter. |
 | `addRadio(name:label:options:selected:attributes:)` | Adds a labelled radio group. `selected` is matched by its `description`. |
 | `addSelect(name:label:options:selected:id:attributes:)` | Adds a select element. `selected` is matched by its `description`. |
+| `addDependentSelect(name:label:dependsOn:optionsPath:options:selected:id:attributes:)` | A select whose options are reloaded from the server when another field changes; see [Dependent selects](#dependent-selects). |
+| `addDate(...)`, `addTime(...)`, `addDateTime(...)` | Native date, time and date-time inputs; see [Date and time inputs](#date-and-time-inputs). |
+| `addAutocomplete(name:label:source:value:minLength:id:attributes:)` | Text input with server-backed suggestions; see [Autocomplete](#autocomplete). |
 | `addSubmit(name:label:icon:style:)` | Adds a submit button, optionally with an [`Icon`](#icons) before the label. Omitting `style` uses `.primary`. |
 | `addSeparator(txt:)` | Adds a labelled section wrapper. |
 | `addRaw(html:)` | Appends HTML verbatim. |
 
 When an `id` is omitted, the library generates a random 10-character alphanumeric ID. Supply explicit IDs whenever application JavaScript, tests, labels outside the form, or accessibility tooling needs stable identifiers.
+
+### Date and time inputs
+
+`addDate`, `addTime` and `addDateTime` render native HTML5 inputs (`type="date"`, `"time"`, `"datetime-local"`) styled with Bootstrap. They need no JavaScript, use the browser's own picker (touch friendly, localized, keyboard accessible) and submit ISO strings.
+
+```swift
+Form(url: "/booking", method: "POST")
+    .addDate(name: "day", label: "Day", value: "2026-10-22", min: "2026-10-01", max: "2026-12-31", id: "day")
+    .addTime(name: "at", label: "Start", value: "09:30", id: "at", attributes: ["step": "900"])
+    .addDateTime(name: "deadline", label: "Deadline", id: "deadline")
+```
+
+| Method | Value format (`value`, `min`, `max`) | Submitted as |
+| --- | --- | --- |
+| `addDate` | `yyyy-MM-dd` | `2026-10-22` |
+| `addTime` | `HH:mm` or `HH:mm:ss` | `09:30` |
+| `addDateTime` | `yyyy-MM-dd'T'HH:mm` | `2026-10-22T09:30` (no time zone) |
+
+An empty field is submitted as an empty string, so decode it as an optional `String`. Browsers that do not support a type fall back to a text input, so validate on the server. The jQuery UI date picker is not used: it only handles dates and does not match Bootstrap's styling.
+
+### Autocomplete
+
+`addAutocomplete` is a text input backed by jQuery UI autocomplete (bundled). The widget is attached on first focus, so it also works in fields loaded into modals, tabs or fragments, and menus inside a modal stay above it.
+
+```swift
+Form(url: "/address", method: "POST")
+    .addAutocomplete(name: "city", label: "City", source: "/cities/suggest", minLength: 2, id: "city")
+```
+
+The browser requests `source` with `?term=<typed text>`. The endpoint must return JSON (with a JSON content type): either an array of strings, or an array of objects such as `{"label": "Berlin (DE)", "value": "Berlin"}`, where `label` is displayed and `value` is put in the field. The field remains free text; the user is not forced to pick a suggestion. Browser autofill is turned off for the field (`autocomplete="off"`).
+
+### Dependent selects
+
+`addDependentSelect` reloads its options from the server whenever another field changes.
+
+```swift
+Form(url: "/address", method: "POST")
+    .addSelect(name: "country", label: "Country", options: countries, id: "country")
+    .addDependentSelect(name: "region", label: "Region",
+                        dependsOn: "country",            // id of the field to watch
+                        optionsPath: "/regions",         // GET /regions?country=pl
+                        options: regions(for: "pl"),     // initial options
+                        id: "region")                    // needed only if another field depends on this one
+```
+
+```swift
+// Endpoint: read the `country` query parameter and return option elements
+server.get["regions"] = { request, _ in
+    let country = ...                     // the `country` query parameter of the request
+    let options = regions(for: country)   // [FormSelectModel]
+    return .ok(.html(FormSelectModel.optionsHTML(options)))
+}
+```
+
+- The request carries the watched field's `name=value` as a query parameter (for the example above `country=pl`), plus a cache-busting `r` parameter.
+- The response body must be `<option>` elements; `FormSelectModel.optionsHTML(_:selected:)` renders them (labels are inserted as is, values are attribute-escaped).
+- While loading, the select is disabled. A previously selected value is kept if it exists in the new options, otherwise the first option is selected. A `change` event is then fired, so chains (country, region, city) work when each level has an explicit `id`.
+- Only the latest request counts, so quick successive changes cannot apply stale options. A failed request shows an error toast and leaves the old options.
+- The initial options come from `options:`; nothing is requested until the watched field changes. The parent can be any field with an `id` and a value (select or input).
 
 ### Form compatibility notes
 
@@ -573,6 +635,16 @@ public class Form: CustomStringConvertible {
     @discardableResult public func addSelect(name: String, label: String,
         options: [FormSelectModel], selected: CustomStringConvertible? = nil,
         id: String? = nil, attributes: [String: String] = [:]) -> Form
+    @discardableResult public func addDependentSelect(name: String, label: String,
+        dependsOn: String, optionsPath: String, options: [FormSelectModel] = [],
+        selected: CustomStringConvertible? = nil, id: String? = nil,
+        attributes: [String: String] = [:]) -> Form
+    @discardableResult public func addDate(name: String, label: String, value: String = "",
+        min: String? = nil, max: String? = nil, id: String? = nil,
+        attributes: [String: String] = [:]) -> Form          // addTime, addDateTime: same signature
+    @discardableResult public func addAutocomplete(name: String, label: String, source: String,
+        value: String = "", minLength: Int = 2, id: String? = nil,
+        attributes: [String: String] = [:]) -> Form
     @discardableResult public func addTextarea(name: String, label: String,
         rows: Int = 3, value: CustomStringConvertible? = nil, id: String? = nil,
         attributes: [String: String] = [:]) -> Form
@@ -618,7 +690,10 @@ public class JSResponse: CustomStringConvertible {
 }
 
 public struct FormRadioModel { public init(label: CustomStringConvertible, value: CustomStringConvertible) }
-public struct FormSelectModel { public init(label: CustomStringConvertible, value: CustomStringConvertible) }
+public struct FormSelectModel {
+    public init(label: CustomStringConvertible, value: CustomStringConvertible)
+    public static func optionsHTML(_ options: [FormSelectModel], selected: CustomStringConvertible? = nil) -> String
+}
 public enum ButtonStyle: String, CustomStringConvertible {
     case primary, secondary, success, danger, warning, info, light, dark, link
     case large, small

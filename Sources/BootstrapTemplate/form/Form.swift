@@ -155,27 +155,111 @@ public class Form {
                           id: String? = nil,
                           attributes: [String:String] = [:]) -> Form {
         
-        var optionsHTML = ""
-        options.forEach { option in
-            var attr: [String:String] = [:]
-            attr["value"] = option.value.description
-            attr["id"] = id ?? self.randomString(length: 10)
-            if selected?.description == option.value.description {
-                attr["selected"] = "selected"
-            }
-            let option = "<option \(makeAttributes(attr))>\(option.label.description)</option>\n"
-            optionsHTML.append(option)
-        }
         var variables = TemplateVariables()
         variables["label"] = label
         variables["name"] = name
         variables["id"] = id ?? self.randomString(length: 10)
         variables["attributes"] = makeAttributes(attributes)
-        variables["options"] = optionsHTML
+        variables["options"] = FormSelectModel.optionsHTML(options, selected: selected)
         self.template.assign(variables, inNest: "select")
         self.html.append(self.template.output)
         self.template.reset()
         return self
+    }
+    
+    // The select's options are reloaded from `optionsPath` whenever the field with id `dependsOn` changes.
+    // The endpoint receives the parent's `name=value` as a query parameter and returns `FormSelectModel.optionsHTML(...)`.
+    // Give this select an explicit `id` if other fields depend on it.
+    @discardableResult
+    public func addDependentSelect(name: String,
+                                   label: String,
+                                   dependsOn parentID: String,
+                                   optionsPath: String,
+                                   options: [FormSelectModel] = [],
+                                   selected: CustomStringConvertible? = nil,
+                                   id: String? = nil,
+                                   attributes: [String:String] = [:]) -> Form {
+        var attributes = attributes
+        attributes["data-depends-on"] = parentID.htmlEscaped
+        attributes["data-options-path"] = optionsPath.htmlEscaped
+        return self.addSelect(name: name, label: label, options: options, selected: selected, id: id, attributes: attributes)
+    }
+    
+    // Native date input; `value`, `min` and `max` use the format yyyy-MM-dd.
+    @discardableResult
+    public func addDate(name: String,
+                        label: String,
+                        value: String = "",
+                        min: String? = nil,
+                        max: String? = nil,
+                        id: String? = nil,
+                        attributes: [String:String] = [:]) -> Form {
+        self.addTemporalInput(type: "date", name: name, label: label, value: value, min: min, max: max, id: id, attributes: attributes)
+    }
+    
+    // Native time input; `value`, `min` and `max` use the format HH:mm (or HH:mm:ss).
+    @discardableResult
+    public func addTime(name: String,
+                        label: String,
+                        value: String = "",
+                        min: String? = nil,
+                        max: String? = nil,
+                        id: String? = nil,
+                        attributes: [String:String] = [:]) -> Form {
+        self.addTemporalInput(type: "time", name: name, label: label, value: value, min: min, max: max, id: id, attributes: attributes)
+    }
+    
+    // Native date and time input (`datetime-local`); `value`, `min` and `max` use the format yyyy-MM-dd'T'HH:mm.
+    @discardableResult
+    public func addDateTime(name: String,
+                            label: String,
+                            value: String = "",
+                            min: String? = nil,
+                            max: String? = nil,
+                            id: String? = nil,
+                            attributes: [String:String] = [:]) -> Form {
+        self.addTemporalInput(type: "datetime-local", name: name, label: label, value: value, min: min, max: max, id: id, attributes: attributes)
+    }
+    
+    private func addTemporalInput(type: String,
+                                  name: String,
+                                  label: String,
+                                  value: String,
+                                  min: String?,
+                                  max: String?,
+                                  id: String?,
+                                  attributes: [String:String]) -> Form {
+        var attributes = attributes
+        attributes["min"] = min?.htmlEscaped
+        attributes["max"] = max?.htmlEscaped
+        var variables = TemplateVariables()
+        variables["type"] = type
+        variables["label"] = label
+        variables["id"] = id ?? self.randomString(length: 10)
+        variables["name"] = name
+        variables["value"] = value
+        variables["attributes"] = makeAttributes(attributes)
+        self.template.assign(variables, inNest: "input")
+        self.html.append(self.template.output)
+        self.template.reset()
+        return self
+    }
+    
+    // Text input with suggestions (jQuery UI autocomplete). `source` is queried with `?term=<text>` and must
+    // return a JSON array of strings or of objects with `label` and `value`.
+    @discardableResult
+    public func addAutocomplete(name: String,
+                                label: String,
+                                source: String,
+                                value: String = "",
+                                minLength: Int = 2,
+                                id: String? = nil,
+                                attributes: [String:String] = [:]) -> Form {
+        var attributes = attributes
+        attributes["data-autocomplete-source"] = source.htmlEscaped
+        attributes["data-autocomplete-min-length"] = "\(Swift.max(minLength, 0))"
+        attributes["autocomplete"] = "off"
+        return self.addInputText(name: name, label: label, value: value, id: id, attributes: attributes)
     }
     
     @discardableResult
@@ -214,7 +298,7 @@ public class Form {
     }
     
     private func makeAttributes(_ attributes: [String:String]) -> String {
-        attributes.map{ "\($0.key)=\"\($0.value)\"" }.joined(separator: " ")
+        attributes.sorted { $0.key < $1.key }.map { "\($0.key)=\"\($0.value)\"" }.joined(separator: " ")
     }
     
     public var output: String {
