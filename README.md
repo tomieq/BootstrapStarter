@@ -64,6 +64,7 @@ The package does not require a specific HTTP framework. The examples use Swifter
 | `Table` | Bootstrap table builder | `CustomStringConvertible` |
 | `Pagination` | Bootstrap page navigation | `CustomStringConvertible` |
 | `Modal` | Bootstrap modal dialog | `CustomStringConvertible` |
+| `ConfirmDialog` | Client-side confirmation dialog | `CustomStringConvertible` (JavaScript) |
 | `JSCode` | One browser-side JavaScript command | `CustomStringConvertible` |
 | `JSResponse` | Ordered, newline-separated JavaScript commands | `CustomStringConvertible` |
 
@@ -333,6 +334,27 @@ JSResponse(.hideModal,
 - The bundled `modal.js` is loaded by every `BootstrapTemplate` page and needs the bundled Bootstrap bundle; it is served together with the other assets.
 - `loadModal` and `showModal` escape their arguments for JavaScript; the other `JSCode` cases do not.
 
+### Confirmation dialogs
+
+`ConfirmDialog` is a client-side Bootstrap dialog with no server round trip. It renders the JavaScript call that opens it, so use it through `JSCode.confirm(_:)` or in a `JSResponse`.
+
+```swift
+Button("Delete",
+       onClick: .confirm(ConfirmDialog("Delete user Ada?",
+                                       title: "Delete user",
+                                       confirmLabel: "Delete",
+                                       confirmStyle: .danger,
+                                       onConfirm: JSResponse(.loadHtml(path: "/users/1/delete", domID: "#usersTable"),
+                                                             .showSuccess("Deleted")))),
+       style: .danger, .small)
+```
+
+- `message`, `title` and the button labels are shown as plain text (line breaks are kept) and are escaped for JavaScript; they need no HTML escaping.
+- `onConfirm` is any `CustomStringConvertible` JavaScript, such as a `JSCode` or a `JSResponse` with several commands. It runs after the dialog has closed, so it can open another modal. Cancelling, the X button and Esc run nothing.
+- `confirmStyle` defaults to `.primary`; pass a color style such as `.danger`.
+- Defaults: title `"Confirm"`, labels `"OK"` and `"Cancel"`.
+- Opening a new confirmation replaces a pending one.
+
 ## Escape HTML and JavaScript
 
 `String.htmlEscaped` is public. It replaces `&`, `<`, `>`, `"` and `'`, making a value safe in HTML text and quoted attribute values. Use it for any untrusted value placed into templates, `Form.addRaw(html:)` or `TableCell.raw(_:)`.
@@ -391,6 +413,7 @@ let response = JSResponse(.showSuccess("Saved"), AppCommand.refresh)
 | `.loadMultipleJS(paths:)` | Loads and runs several scripts. |
 | `.loadHtmlAndJS(htmlPath:htmlDomID:jsPath:)` | Loads HTML into a selector, then loads one script. |
 | `.loadModal(path:)`, `.showModal(domID:)`, `.hideModal` | Modal commands; see [Modals](#modals). |
+| `.confirm(_:)` | Opens a `ConfirmDialog`; see [Confirmation dialogs](#confirmation-dialogs). |
 | `.showSuccess(_)`, `.showError(_)`, `.showWarning(_)`, `.showInfo(_)` | Shows a Noty notification using the bundled notification helpers. |
 | `.custom(code:)` | Emits the supplied JavaScript unchanged. |
 | `.submitForm(path:domID:)` | Intended to call the bundled form helper; see the compatibility note below. |
@@ -460,6 +483,7 @@ public enum JSCode: CustomStringConvertible {
     case loadMultipleJS(paths: [String])
     case loadHtmlAndJS(htmlPath: String, htmlDomID: String, jsPath: String)
     case loadModal(path: String), showModal(domID: String), hideModal
+    case confirm(ConfirmDialog)
     case showSuccess(String), showError(String), showWarning(String), showInfo(String)
     case custom(code: String)
 }
@@ -539,6 +563,13 @@ public struct Modal: CustomStringConvertible {
 }
 public enum ModalSize { case small, large, extraLarge, fullscreen }
 
+public struct ConfirmDialog: CustomStringConvertible {
+    public init(_ message: String, title: String = "Confirm", confirmLabel: String = "OK",
+                cancelLabel: String = "Cancel", confirmStyle: ButtonStyle = .primary,
+                onConfirm: CustomStringConvertible)
+    public var output: String { get }
+}
+
 extension String {
     public var htmlEscaped: String { get }
     public var jsEscaped: String { get }
@@ -560,7 +591,7 @@ Properties not shown as public in this list are implementation details. In parti
 When modifying an application that uses this package:
 
 1. Import `BootstrapTemplate`, not the repository name.
-2. Treat `BootstrapTemplate`, `Form`, `Button`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
+2. Treat `BootstrapTemplate`, `Form`, `Button`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `ConfirmDialog`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
 3. Preserve static serving for `BootstrapTemplate.absolutePath(for:)`; without it, every generated page is missing its bundled CSS and JavaScript.
 4. Use a CSS selector such as `"#content"` for `JSCode.loadHtml` and `JSCode.loadHtmlAndJS` target arguments.
 5. Prefer explicit form IDs when any client code needs to select fields. Generated IDs are intentionally non-deterministic.

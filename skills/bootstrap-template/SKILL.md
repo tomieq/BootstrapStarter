@@ -18,6 +18,7 @@ It is built on top of [Template.swift](https://github.com/tomieq/Template.swift)
 | `Button` | Bootstrap button or link-button, usable anywhere |
 | `Pagination` | Bootstrap page navigation |
 | `Modal` | Bootstrap modal dialog |
+| `ConfirmDialog` | Client-side confirmation dialog (used via `JSCode.confirm`) |
 | `FormSelectModel`, `FormRadioModel`, `ButtonStyle`, `TableStyle`, `TableRowStyle`, `TableAlignment` | Helper types |
 | `String.htmlEscaped` | Public HTML escaping helper |
 | `String.jsEscaped` | Public escaping for single-quoted JS string literals |
@@ -235,6 +236,23 @@ Typical flow: `Button("Edit", onClick: .loadModal(path: "/users/1/edit"))` -> en
 - Footer `Button`s are `type="button"`; they cannot submit a form, so keep the submit in the form body.
 - `loadModal`/`showModal` escape their arguments for JS; other `JSCode` cases do not.
 
+### Confirmation dialog
+
+`ConfirmDialog` is a client-side Bootstrap dialog (no server round trip); it renders the JS call that opens it. Use it as `.confirm(ConfirmDialog(...))`.
+
+```swift
+Button("Delete",
+       onClick: .confirm(ConfirmDialog("Delete user Ada?", title: "Delete user", confirmLabel: "Delete",
+                                       confirmStyle: .danger,
+                                       onConfirm: JSResponse(.loadHtml(path: "/users/1/delete", domID: "#usersTable"),
+                                                             .showSuccess("Deleted")))),
+       style: .danger, .small)
+```
+
+- Texts are plain text (newlines kept) and JS-escaped; no HTML escaping needed.
+- `onConfirm` is any `CustomStringConvertible` JS (`JSCode`, `JSResponse`); it runs after the dialog closes, so it may open another modal. Cancel/X/Esc run nothing.
+- Defaults: title `"Confirm"`, labels `"OK"`/`"Cancel"`, `confirmStyle: .primary`.
+
 ## JavaScript responses
 
 `JSResponse` joins `JSCode` commands (or any `CustomStringConvertible`/`String`) with newlines. Return it as JavaScript (`.ok(.js(...))` in Swifter); the browser executes it.
@@ -260,6 +278,7 @@ JSResponse {
 | `.loadJS(path:)` / `.loadMultipleJS(paths:)` | Load and run script(s) |
 | `.loadHtmlAndJS(htmlPath:htmlDomID:jsPath:)` | Load HTML then a script |
 | `.loadModal(path:)` / `.showModal(domID:)` / `.hideModal` | Modal commands, see Modal |
+| `.confirm(ConfirmDialog)` | Confirmation dialog, see Modal |
 | `.custom(code:)` | Raw JavaScript |
 | `.submitForm(path:domID:)` | BROKEN (malformed output); do not use |
 

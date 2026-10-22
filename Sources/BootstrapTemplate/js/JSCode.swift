@@ -18,7 +18,7 @@ public enum JSCode {
     case loadModal(path: String)
     case showModal(domID: String)
     case hideModal
-    
+    case confirm(ConfirmDialog)    
     // notifications
     case showSuccess(String)
     case showError(String)
@@ -47,6 +47,8 @@ extension JSCode: CustomStringConvertible {
             "showModal('\(domID.jsEscaped)');"
         case .hideModal:
             "hideModals();"
+        case .confirm(let dialog):
+            dialog.output
         case .showSuccess(let message):
             "showSuccess('\(message)');"
         case .showError(let message):
