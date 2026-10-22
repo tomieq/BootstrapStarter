@@ -11,6 +11,9 @@ It bundles Bootstrap 5.3.1, jQuery 3.6.1, jQuery UI 1.13.3, Noty, and small brow
 - [Render a page](#render-a-page)
 - [Serve bundled browser assets](#serve-bundled-browser-assets)
 - [Build forms](#build-forms)
+- [Buttons](#buttons)
+- [Build tables](#build-tables)
+- [Escape HTML](#escape-html)
 - [Compose JavaScript responses](#compose-javascript-responses)
 - [Public API reference](#public-api-reference)
 - [Security and operating notes](#security-and-operating-notes)
@@ -55,6 +58,8 @@ The package does not require a specific HTTP framework. The examples use Swifter
 | --- | --- | --- |
 | `BootstrapTemplate` | Full HTML document with bundled CSS and scripts | `CustomStringConvertible` |
 | `Form` | Bootstrap-styled HTML form builder | `CustomStringConvertible` |
+| `Button` | Bootstrap button or link-button | `CustomStringConvertible` |
+| `Table` | Bootstrap table builder | `CustomStringConvertible` |
 | `JSCode` | One browser-side JavaScript command | `CustomStringConvertible` |
 | `JSResponse` | Ordered, newline-separated JavaScript commands | `CustomStringConvertible` |
 
@@ -224,6 +229,53 @@ FormSelectModel(label: CustomStringConvertible, value: CustomStringConvertible)
 
 Available `ButtonStyle` cases are `.primary`, `.secondary`, `.success`, `.danger`, `.warning`, `.info`, `.light`, `.dark`, `.link`, `.large`, and `.small`. Multiple styles are allowed, for example `.addSubmit(name: "save", label: "Save", style: .success, .large)`.
 
+## Buttons
+
+`Button` is a value type. Label, URL, `onClick` code and attribute values are HTML-escaped. `style:` is variadic and last; `.primary` is added when no color style is given.
+
+```swift
+Button("Delete", onClick: .loadHtml(path: "/users/1/delete", domID: "#modal"), style: .danger, .small)
+Button("Open", url: "/users/1", attributes: ["title": "Details"], style: .success) // <a class="btn ..." role="button">
+```
+
+A button renders with `type="button"`; use `Form.addSubmit` for submit buttons. Pass it to `Form.addRaw(html:)`, a page body, or `TableCell(_:)`.
+
+## Build tables
+
+`Table` accumulates rows in the order added; every setter returns the same table.
+
+```swift
+let table = Table(id: "users",
+                  columns: ["Name", TableColumn("Age", alignment: .right), ""],
+                  styles: [.striped, .hover],
+                  responsive: true)
+    .setCaption("Users")
+    .setEmptyMessage("No users")
+
+table.addRows(users) { user in
+    [TableCell(user.name),
+     TableCell(user.age),
+     TableCell(Button("Delete", onClick: .loadHtml(path: "/users/\(user.id)/delete", domID: "#modal"),
+                      style: .danger, .small))]
+}
+table.addRow(["Total", "42", .link("Report", url: "/report")], style: .warning)
+```
+
+| API | Behavior |
+| --- | --- |
+| `TableCell(_:)`, string literal | Text, HTML-escaped. |
+| `TableCell(_ button:)` | Inserts the rendered `Button`. |
+| `TableCell.raw(_:)` | Inserts HTML as is. Never use with untrusted content. |
+| `TableCell.link(_:url:)` | Escaped `<a>` link. |
+| `TableColumn(_:alignment:)` | Header title and default alignment for the column's cells; a cell's own `alignment:` overrides it. |
+| `setCaption(_:)`, `setEmptyMessage(_:)` | Caption; placeholder row shown when there are no rows. |
+
+`TableStyle` cases are `.striped`, `.hover`, `.bordered`, `.borderless`, `.small`, `.dark` (default `[.striped, .hover]`). `TableRowStyle` cases are `.primary`, `.secondary`, `.success`, `.danger`, `.warning`, `.info`, `.light`, `.dark`, `.active`. With `responsive: true` (default) the table is wrapped in `div.table-responsive`.
+
+## Escape HTML
+
+`String.htmlEscaped` is public. It replaces `&`, `<`, `>`, `"` and `'`, making a value safe in HTML text and quoted attribute values. Use it for any untrusted value placed into templates, `Form.addRaw(html:)` or `TableCell.raw(_:)`. It does not escape for JavaScript or CSS contexts.
+
 ## Compose JavaScript responses
 
 Use `JSCode` to generate a supported browser command, and `JSResponse` to join commands with newlines. This is useful for endpoints that return JavaScript to a page that has loaded the bundled browser helpers.
@@ -365,13 +417,46 @@ public enum ButtonStyle: String, CustomStringConvertible {
     case large, small
     public var cssClass: String { get }
 }
+
+public struct Button: CustomStringConvertible {
+    public init(_ label: String, onClick: JSCode? = nil,
+                attributes: [String: String] = [:], style: ButtonStyle...)
+    public init(_ label: String, url: String,
+                attributes: [String: String] = [:], style: ButtonStyle...)
+    public var output: String { get }
+}
+
+public class Table: CustomStringConvertible {
+    public init(id: String? = nil, columns: [TableColumn],
+                styles: [TableStyle] = [.striped, .hover], responsive: Bool = true)
+    @discardableResult public func addRow(_ cells: [TableCell], style: TableRowStyle? = nil) -> Table
+    @discardableResult public func addRows<T>(_ items: [T], cells: (T) -> [TableCell]) -> Table
+    @discardableResult public func setCaption(_ caption: String) -> Table
+    @discardableResult public func setEmptyMessage(_ message: String) -> Table
+    public var output: String { get }
+}
+
+public struct TableColumn: ExpressibleByStringLiteral {
+    public init(_ title: String, alignment: TableAlignment? = nil)
+}
+public struct TableCell: ExpressibleByStringLiteral {
+    public init(_ text: CustomStringConvertible, alignment: TableAlignment? = nil)
+    public init(_ button: Button, alignment: TableAlignment? = nil)
+    public static func raw(_ html: CustomStringConvertible, alignment: TableAlignment? = nil) -> TableCell
+    public static func link(_ label: String, url: String, alignment: TableAlignment? = nil) -> TableCell
+}
+public enum TableStyle { case striped, hover, bordered, borderless, small, dark }
+public enum TableRowStyle { case primary, secondary, success, danger, warning, info, light, dark, active }
+public enum TableAlignment { case left, center, right }
+
+extension String { public var htmlEscaped: String { get } }
 ```
 
 Properties not shown as public in this list are implementation details. In particular, option models expose construction but not public `label` or `value` properties.
 
 ## Security and operating notes
 
-- **Escape at the boundary.** Page bodies, form labels, values, attributes, raw form HTML, metadata, CSS, JavaScript, and `JSCode` arguments are interpolated into templates or scripts. This library does not promise HTML, attribute, CSS, or JavaScript escaping. Encode untrusted data for its exact output context before passing it in.
+- **Escape at the boundary.** Page bodies, form labels, values, attributes, raw form HTML, metadata, CSS, JavaScript, and `JSCode` arguments are interpolated into templates or scripts. `Table` and `Button` escape their text, URLs and attribute values, and `String.htmlEscaped` is available for the rest, but the library does not escape JavaScript or CSS. Encode untrusted data for its exact output context before passing it in.
 - **Validate server requests normally.** Form generation does not add CSRF protection, authentication, authorization, validation, or rate limiting.
 - **Set a content-security policy deliberately.** Inline scripts and styles are generated by `addJS(code:)` and `addCSS(code:)`; a restrictive CSP needs nonces, hashes, or a policy that permits those blocks.
 - **Serve resources in deployment.** The package uses `Bundle.module` to locate copied resources. In a Linux container, ensure the SwiftPM-generated resource bundle (typically a `.resources` directory beside the executable) is copied into the runtime image along with the executable.
@@ -382,7 +467,7 @@ Properties not shown as public in this list are implementation details. In parti
 When modifying an application that uses this package:
 
 1. Import `BootstrapTemplate`, not the repository name.
-2. Treat `BootstrapTemplate`, `Form`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, and `ButtonStyle` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration.
+2. Treat `BootstrapTemplate`, `Form`, `Button`, `Table`, `TableCell`, `TableColumn`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, and `String.htmlEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` in the application.
 3. Preserve static serving for `BootstrapTemplate.absolutePath(for:)`; without it, every generated page is missing its bundled CSS and JavaScript.
 4. Use a CSS selector such as `"#content"` for `JSCode.loadHtml` and `JSCode.loadHtmlAndJS` target arguments.
 5. Prefer explicit form IDs when any client code needs to select fields. Generated IDs are intentionally non-deterministic.

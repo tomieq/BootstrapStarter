@@ -26,7 +26,7 @@ Sources/<App>/
   Flows/
     Flow.swift                # protocol Flow { func register(on server: HttpServer) }
     <Module>Flow.swift        # one class per module
-  Extensions/                 # small helpers: String+HTML, WebPath+URL, BootstrapTemplate+Portal (shared page shell)
+  Extensions/                 # small helpers: WebPath+URL, BootstrapTemplate+Portal (shared page shell)
 ```
 
 Run from the directory containing `Resources/` (`swift run` from the project root).
@@ -36,7 +36,7 @@ Run from the directory containing `Resources/` (`swift run` from the project roo
 1. **One Flow per module.** Each `<Module>Flow` owns all routes, handlers and page builders of that module. Never create a single catch-all routes class.
 2. **No HTML in Swift sources.** Markup goes into `Resources/<module>/*.tpl.html`, loaded with `Template.cached(relativePath:)` (use `load` while developing). The folder name is the module that owns the template; shared pieces (menu, user bar) get their own module folder such as `navi/`. Swift only assigns values. Exception: HTML produced by `Form` / `JSCode` from BootstrapStarter.
 3. **Compose pages from templates.** Fragment templates are assigned into a page template placeholder (`body["userbar"] = userbar`), then set as `BootstrapTemplate.body`. Page shell, CSS and JS come from `BootstrapTemplate`.
-4. **Escape dynamic values** with `htmlEscaped` before assigning them into templates; escape for JS in `JSCode` strings.
+4. **Escape dynamic values** with `htmlEscaped` (public, from `BootstrapTemplate`; do not redefine it) before assigning them into templates; escape for JS in `JSCode` strings. `Table` and `Button` escape their own text.
 5. **Dependencies are injected** through Flow initializers (stores, services). Flows never create their own shared state and never reach for globals.
 6. **Shared state lives in stores** (`final class`, lock-protected or an actor) created once in `main.swift`. Start with in-memory stores behind a clear type; swap implementation later without touching Flows.
 7. **Logging and config:** one `Logger(Type.self)` per Flow/store; read settings once through `Env` (and `Param` for CLI overrides) in `Config`; never log secrets.

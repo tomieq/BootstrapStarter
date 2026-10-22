@@ -14,7 +14,10 @@ It is built on top of [Template.swift](https://github.com/tomieq/Template.swift)
 | `BootstrapTemplate` | Full HTML page with bundled CSS/JS |
 | `Form` | Bootstrap-styled form builder (optionally AJAX) |
 | `JSCode` / `JSResponse` | JavaScript commands returned to the browser |
-| `FormSelectModel`, `FormRadioModel`, `ButtonStyle` | Form helper types |
+| `Table` / `TableCell` / `TableColumn` | Bootstrap table builder |
+| `Button` | Bootstrap button or link-button, usable anywhere |
+| `FormSelectModel`, `FormRadioModel`, `ButtonStyle`, `TableStyle`, `TableRowStyle`, `TableAlignment` | Helper types |
+| `String.htmlEscaped` | Public HTML escaping helper |
 
 All of them are `CustomStringConvertible`; `description` renders the output.
 
@@ -125,19 +128,7 @@ Notes:
 - `Template.load(relativePath:)` resolves against `<working dir>/Resources/`; start the process from the directory that contains `Resources/`. Use `Template.cached` in production, `load` in development.
 - Library-internal templates (`templates/index.tpl.html`, `templates/form.tpl.html`) are loaded from the package bundle; do not edit or reuse them.
 - `{name}` placeholders collide with literal braces in CSS/JS. Move CSS/JS to files, or use `Template(raw:interpolation: .mustache)`.
-- Neither library escapes HTML. Escape user data before assigning it. The samples assume this app-defined helper:
-
-```swift
-extension String {
-    var htmlEscaped: String {
-        self.replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-            .replacingOccurrences(of: "\"", with: "&quot;")
-            .replacingOccurrences(of: "'", with: "&#39;")
-    }
-}
-```
+- Template does not escape HTML. Escape user data before assigning it with the public `String.htmlEscaped` from `BootstrapTemplate` (escapes `& < > " '`); do not redefine it in the app. `Table` and `Button` already escape their text, URLs and attributes.
 
 ## Form builder
 
@@ -166,6 +157,43 @@ let form = Form(url: "/account", method: "POST", attributes: ["id": "accountForm
 - Always pass explicit `id:` for fields your JS touches; omitted ids are random 10-char strings.
 - `ButtonStyle`: `.primary` (default), `.secondary`, `.success`, `.danger`, `.warning`, `.info`, `.light`, `.dark`, `.link`, `.large`, `.small` (combinable).
 - Known quirks: `addPassword` placeholder is not rendered; `addCheckbox` takes no custom attributes; `addRadio` attributes go to the wrapper.
+
+## Button
+
+`Button` is a value type that renders to HTML (`CustomStringConvertible`, `.output`). Label, URL, `onClick` code and attribute values are HTML-escaped.
+
+```swift
+Button("Delete", onClick: .loadHtml(path: "/users/1/delete", domID: "#modal"), style: .danger, .small)
+Button("Open", url: "/users/1", attributes: ["title": "Details"], style: .success)  // <a class="btn" role="button">
+```
+
+- `style:` is variadic and last; colors and sizes combine. `.primary` is added when no color is given.
+- Renders `type="button"`; `Form.addSubmit` is still the way to add a submit button.
+- Use it as `Form.addRaw(html: button)`, `page.body`, or `TableCell(button)`.
+
+## Table
+
+`Table` accumulates rows; every setter returns the table. `table.output` / `description` renders it.
+
+```swift
+let table = Table(id: "users", columns: ["Name", TableColumn("Age", alignment: .right), ""],
+                  styles: [.striped, .hover], responsive: true)
+    .setCaption("Users")
+    .setEmptyMessage("No users")
+
+table.addRows(users) { user in
+    [TableCell(user.name),
+     TableCell(user.age),
+     TableCell(Button("Delete", onClick: .loadHtml(path: "/users/\(user.id)/delete", domID: "#modal"), style: .danger, .small))]
+}
+table.addRow(["x", "1", .link("Open", url: "/x")], style: .warning)
+```
+
+- `TableCell(_:)` and string literals are HTML-escaped; `TableCell(Button)` inserts the button; `TableCell.raw(html)` inserts HTML as is (never with untrusted input); `TableCell.link(_:url:)` renders an escaped `<a>`.
+- Column alignment applies to header and cells; a cell's own `alignment:` overrides it.
+- `TableStyle`: `.striped`, `.hover`, `.bordered`, `.borderless`, `.small`, `.dark` (defaults `[.striped, .hover]`). `TableRowStyle`: `.primary`...`.dark`, `.active`.
+- `responsive: true` (default) wraps the table in `div.table-responsive`.
+- To refresh a table after an action, wrap it in a container and return `.loadHtml(path:domID:)` pointing at an endpoint that returns the table.
 
 ## JavaScript responses
 
