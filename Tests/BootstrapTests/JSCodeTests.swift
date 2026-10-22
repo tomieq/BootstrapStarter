@@ -8,6 +8,15 @@ final class JSCodeTests: XCTestCase {
         XCTAssertEqual(JSCode.loadMultipleJS(paths: ["/a.js", "/b'.js"]).description, "runScripts(['/a.js', '/b\\'.js']);")
     }
 
+    func testNotificationWithIcon() {
+        XCTAssertEqual(JSCode.showSuccess("Saved", icon: .check).description,
+                       "showSuccess('<i class=\"bi bi-check-lg\" aria-hidden=\"true\"><\\/i> Saved');")
+        XCTAssertTrue(JSCode.showError("Failed", icon: .error).description.hasPrefix("showError('<i class=\"bi bi-x-circle\""))
+        XCTAssertTrue(JSCode.showWarning("Careful", icon: Icon("bug")).description.contains("bi-bug"))
+        XCTAssertTrue(JSCode.showInfo("FYI", icon: .info).description.hasSuffix("<\\/i> FYI');"))
+        XCTAssertEqual(JSCode.showInfo("FYI").description, "showInfo('FYI');")
+    }
+
     func testSubmitFormIsWellFormed() {
         XCTAssertEqual(JSCode.submitForm(path: "/save", domID: "#form").description, "submitFormInBackground('/save', '#form');")
     }

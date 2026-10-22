@@ -461,7 +461,7 @@ let response = JSResponse(.showSuccess("Saved"), AppCommand.refresh)
 | `.loadHtmlAndJS(htmlPath:htmlDomID:jsPath:)` | Loads HTML into a selector, then loads one script. |
 | `.loadModal(path:)`, `.showModal(domID:)`, `.hideModal` | Modal commands; see [Modals](#modals). |
 | `.confirm(_:)` | Opens a `ConfirmDialog`; see [Confirmation dialogs](#confirmation-dialogs). |
-| `.showSuccess(_)`, `.showError(_)`, `.showWarning(_)`, `.showInfo(_)` | Shows a Noty notification using the bundled notification helpers. The text is rendered as HTML. |
+| `.showSuccess(_:icon:)`, `.showError(_:icon:)`, `.showWarning(_:icon:)`, `.showInfo(_:icon:)` | Shows a Noty notification using the bundled notification helpers. The text is rendered as HTML. The optional [`Icon`](#icons) is placed before the text (the page needs `addIcons()`), for example `.showSuccess("Saved", icon: .check)`. |
 | `.redirect(path:)`, `.reload` | Navigates to a URL or reloads the page. Never pass an untrusted URL to `.redirect`. |
 | `.scrollTo(domID:)` | Smooth-scrolls the selector's first element into view. |
 | `.copyToClipboard(_)` | Copies text to the clipboard (uses the Clipboard API on secure contexts, a fallback otherwise). |
@@ -543,7 +543,8 @@ public enum JSCode: CustomStringConvertible {
     case loadHtmlAndJS(htmlPath: String, htmlDomID: String, jsPath: String)
     case loadModal(path: String), showModal(domID: String), hideModal
     case confirm(ConfirmDialog)
-    case showSuccess(String), showError(String), showWarning(String), showInfo(String)
+    case showSuccess(String, icon: Icon? = nil), showError(String, icon: Icon? = nil)
+    case showWarning(String, icon: Icon? = nil), showInfo(String, icon: Icon? = nil)
     case redirect(path: String), reload, scrollTo(domID: String), copyToClipboard(String)
     case setTheme(BootstrapTheme), toggleTheme
     case setHtml(domID: String, html: String), appendHtml(domID: String, html: String)

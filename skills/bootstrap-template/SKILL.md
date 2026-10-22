@@ -292,7 +292,7 @@ JSResponse().add(.showSuccess("Saved")).add(.hideModal).add(.refreshHtml(path: "
 
 | `JSCode` | Effect |
 | --- | --- |
-| `.showSuccess/.showError/.showWarning/.showInfo(String)` | Noty toast (top right); text is rendered as HTML |
+| `.showSuccess/.showError/.showWarning/.showInfo(String, icon: Icon? = nil)` | Noty toast (top right); text is rendered as HTML; optional `Icon` goes before the text (needs `page.addIcons()`), e.g. `.showSuccess("Saved", icon: .check)` |
 | `.loadHtml(path:domID:)` | Empty selector, load HTML from `path` into it, run scripts in it |
 | `.refreshHtml(path:domID:)` | Same, but keeps old content until the new arrives (no flicker) |
 | `.poll(path:domID:interval:)` / `.stopPolling(domID:)` | Reload selector's HTML every `interval` s (min 0.25) until stopped or element gone; errors ignored |

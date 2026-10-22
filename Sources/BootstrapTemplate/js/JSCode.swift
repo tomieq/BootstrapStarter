@@ -21,11 +21,11 @@ public enum JSCode {
     case showModal(domID: String)
     case hideModal
     case confirm(ConfirmDialog)    
-    // notifications
-    case showSuccess(String)
-    case showError(String)
-    case showWarning(String)
-    case showInfo(String)
+    // notifications; the optional icon needs `BootstrapTemplate.addIcons()`
+    case showSuccess(String, icon: Icon? = nil)
+    case showError(String, icon: Icon? = nil)
+    case showWarning(String, icon: Icon? = nil)
+    case showInfo(String, icon: Icon? = nil)
     
     // page
     case redirect(path: String)
@@ -73,14 +73,14 @@ extension JSCode: CustomStringConvertible {
             "hideModals();"
         case .confirm(let dialog):
             dialog.output
-        case .showSuccess(let message):
-            "showSuccess('\(message.jsEscaped)');"
-        case .showError(let message):
-            "showError('\(message.jsEscaped)');"
-        case .showWarning(let message):
-            "showWarning('\(message.jsEscaped)');"
-        case .showInfo(let message):
-            "showInfo('\(message.jsEscaped)');"
+        case .showSuccess(let message, let icon):
+            Self.notification("showSuccess", message, icon)
+        case .showError(let message, let icon):
+            Self.notification("showError", message, icon)
+        case .showWarning(let message, let icon):
+            Self.notification("showWarning", message, icon)
+        case .showInfo(let message, let icon):
+            Self.notification("showInfo", message, icon)
         case .redirect(let path):
             "window.location.href = '\(path.jsEscaped)';"
         case .reload:
@@ -112,5 +112,10 @@ extension JSCode: CustomStringConvertible {
         case .custom(let code):
             code
         }
+    }
+
+    private static func notification(_ function: String, _ message: String, _ icon: Icon?) -> String {
+        let text = icon.map { "\($0.output) \(message)" } ?? message
+        return "\(function)('\(text.jsEscaped)');"
     }
 }
