@@ -16,6 +16,7 @@ It bundles Bootstrap 5.3.1, Bootstrap Icons 1.13.1, jQuery 3.6.1, jQuery UI 1.13
 - [Paginate](#paginate)
 - [Modals](#modals)
 - [Tabs](#tabs)
+- [List groups and badges](#list-groups-and-badges)
 - [Icons](#icons)
 - [Escape HTML and JavaScript](#escape-html-and-javascript)
 - [Compose JavaScript responses](#compose-javascript-responses)
@@ -64,6 +65,8 @@ The package does not require a specific HTTP framework. The examples use Swifter
 | `Form` | Bootstrap-styled HTML form builder | `CustomStringConvertible` |
 | `Button` | Bootstrap button or link-button | `CustomStringConvertible` |
 | `Tabs` | Bootstrap tabs or pills, with lazy-loaded panes | `CustomStringConvertible` |
+| `ListGroup` | Bootstrap list group: plain, linked or actionable items | `CustomStringConvertible` |
+| `Badge` | Bootstrap badge | `CustomStringConvertible` |
 | `Icon` | Bootstrap Icons glyph | `CustomStringConvertible` |
 | `Table` | Bootstrap table builder | `CustomStringConvertible` |
 | `Pagination` | Bootstrap page navigation | `CustomStringConvertible` |
@@ -393,6 +396,27 @@ page.body = tabs
 - Options: `style` is `.tabs`, `.pills` or `.underline`; `fill: true` spreads the tabs over the full width; `vertical: true` puts the tab list on the left.
 - The lazy loader runs on every `BootstrapTemplate` page (`tabs.js`) and also picks up tabs inside modals and fragments loaded with `loadHtml`.
 
+## List groups and badges
+
+`ListGroup` renders a Bootstrap list group from `ListGroupItem` values; every `add...` returns the same list.
+
+```swift
+let list = ListGroup(id: "folders", flush: false)
+    .addItem("Plain item")
+    .addItem(ListGroupItem("Inbox", icon: .mail, badge: Badge(14, color: .primary, pill: true)))
+    .addItem(ListGroupItem("Reports", url: "/reports", active: true))
+    .addItem(ListGroupItem("Delete all", onClick: .confirm(ConfirmDialog("Sure?", onConfirm: JSCode.reload)), color: .danger))
+    .setEmptyMessage("No folders")
+
+list.addItems(folders) { ListGroupItem($0.name, url: "/folders/\($0.id)", badge: Badge($0.count)) }
+```
+
+- Item kinds: `ListGroupItem(_:)` or a string literal is plain, `ListGroupItem(_:url:)` renders a link, `ListGroupItem(_:onClick:)` renders a button running a `JSCode`, and `ListGroupItem.raw(_:url:onClick:...)` inserts HTML as is. Text and URLs are escaped.
+- Every item accepts `icon` (needs `addIcons()`), `badge`, `color` (a `ContextColor`), `active` and `disabled`. Disabled links and buttons cannot be activated.
+- The container is a `<ul>` (or `<ol>` with `numbered: true`) for plain items. As soon as one item is a link or button the list becomes a `<div>`, as Bootstrap requires, and plain items are rendered as `<div>` too.
+- Options: `flush` removes borders and rounding, `numbered` shows counters, `horizontal` lays items out in a row. `setEmptyMessage(_:)` shows a disabled item when the list is empty.
+- `Badge(_:color:pill:)` renders `<span class="badge text-bg-primary">` and can be used on its own (`TableCell(Badge("New", color: .success))`, `Form.addRaw`, page bodies). Its text is escaped; `ContextColor` is `.primary`, `.secondary`, `.success`, `.danger`, `.warning`, `.info`, `.light` or `.dark`.
+
 ## Icons
 
 `Icon` renders a [Bootstrap Icons](https://icons.getbootstrap.com/) glyph as `<i class="bi bi-trash" aria-hidden="true"></i>`. The library bundles a pinned snapshot (v1.13.1: stylesheet, `woff2`/`woff` fonts and the MIT license) under `bootstrap-icons-1.13.1/`, so it does not change when upstream does. Icons are opt-in: call `addIcons()` on the page to load the stylesheet, and keep serving the bundled assets (the fonts are requested relative to the stylesheet).
@@ -633,6 +657,7 @@ public struct TableCell: ExpressibleByStringLiteral {
     public init(_ text: CustomStringConvertible, alignment: TableAlignment? = nil)
     public init(_ button: Button, alignment: TableAlignment? = nil)
     public init(_ icon: Icon, alignment: TableAlignment? = nil)
+    public init(_ badge: Badge, alignment: TableAlignment? = nil)
     public static func raw(_ html: CustomStringConvertible, alignment: TableAlignment? = nil) -> TableCell
     public static func link(_ label: String, url: String, alignment: TableAlignment? = nil) -> TableCell
 }
@@ -675,6 +700,33 @@ public class Tabs: CustomStringConvertible {
 }
 public enum TabsStyle { case tabs, pills, underline }
 
+public enum ContextColor: String { case primary, secondary, success, danger, warning, info, light, dark }
+
+public struct Badge: CustomStringConvertible {
+    public init(_ text: CustomStringConvertible, color: ContextColor = .primary, pill: Bool = false)
+    public var output: String { get }
+}
+
+public struct ListGroupItem: ExpressibleByStringLiteral {
+    public init(_ text: String, icon: Icon? = nil, badge: Badge? = nil, color: ContextColor? = nil,
+                active: Bool = false, disabled: Bool = false)
+    public init(_ text: String, url: String, icon: Icon? = nil, badge: Badge? = nil,
+                color: ContextColor? = nil, active: Bool = false, disabled: Bool = false)
+    public init(_ text: String, onClick: JSCode, icon: Icon? = nil, badge: Badge? = nil,
+                color: ContextColor? = nil, active: Bool = false, disabled: Bool = false)
+    public static func raw(_ html: CustomStringConvertible, url: String? = nil, onClick: JSCode? = nil,
+                           badge: Badge? = nil, color: ContextColor? = nil,
+                           active: Bool = false, disabled: Bool = false) -> ListGroupItem
+}
+
+public class ListGroup: CustomStringConvertible {
+    public init(id: String? = nil, flush: Bool = false, numbered: Bool = false, horizontal: Bool = false)
+    @discardableResult public func addItem(_ item: ListGroupItem) -> ListGroup
+    @discardableResult public func addItems<T>(_ models: [T], item: (T) -> ListGroupItem) -> ListGroup
+    @discardableResult public func setEmptyMessage(_ message: String) -> ListGroup
+    public var output: String { get }
+}
+
 public struct ConfirmDialog: CustomStringConvertible {
     public init(_ message: String, title: String = "Confirm", confirmLabel: String = "OK",
                 cancelLabel: String = "Cancel", confirmStyle: ButtonStyle = .primary,
@@ -703,7 +755,7 @@ Properties not shown as public in this list are implementation details. In parti
 When modifying an application that uses this package:
 
 1. Import `BootstrapTemplate`, not the repository name.
-2. Treat `BootstrapTemplate`, `Form`, `Button`, `Icon`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `ConfirmDialog`, `Tabs`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
+2. Treat `BootstrapTemplate`, `Form`, `Button`, `Icon`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `ConfirmDialog`, `Tabs`, `ListGroup`, `Badge`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
 3. Preserve static serving for `BootstrapTemplate.absolutePath(for:)`; without it, every generated page is missing its bundled CSS and JavaScript.
 4. Use a CSS selector such as `"#content"` for `JSCode.loadHtml` and `JSCode.loadHtmlAndJS` target arguments.
 5. Prefer explicit form IDs when any client code needs to select fields. Generated IDs are intentionally non-deterministic.

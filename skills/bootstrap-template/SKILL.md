@@ -18,6 +18,8 @@ It is built on top of [Template.swift](https://github.com/tomieq/Template.swift)
 | `Button` | Bootstrap button or link-button, usable anywhere |
 | `Icon` | Bootstrap Icons glyph (pinned bundled snapshot; opt-in via `page.addIcons()`) |
 | `Tabs` | Bootstrap tabs/pills with optional lazy-loaded panes |
+| `ListGroup` / `ListGroupItem` | Bootstrap list group: plain, link or button items, badges |
+| `Badge` | Bootstrap badge (`ContextColor`, optional pill) |
 | `Pagination` | Bootstrap page navigation |
 | `Modal` | Bootstrap modal dialog |
 | `ConfirmDialog` | Client-side confirmation dialog (used via `JSCode.confirm`) |
@@ -177,6 +179,24 @@ Button("Open", url: "/users/1", attributes: ["title": "Details"], style: .succes
 - Renders `type="button"`; `Form.addSubmit` is still the way to add a submit button.
 - Use it as `Form.addRaw(html: button)`, `page.body`, or `TableCell(button)`.
 - `icon:` puts an `Icon` before the label (`Button("Delete", icon: .trash, ...)`); an empty label makes it icon-only, so pass `attributes: ["aria-label": "Delete"]`.
+
+## ListGroup and Badge
+
+`ListGroup` (class, chainable `addItem`, `addItems(models) { ... }`, `setEmptyMessage`) renders items given as `ListGroupItem` values (a string literal is a plain item).
+
+```swift
+ListGroup(id: "folders")
+    .addItem("Plain")
+    .addItem(ListGroupItem("Inbox", icon: .mail, badge: Badge(14, color: .primary, pill: true)))
+    .addItem(ListGroupItem("Reports", url: "/reports", active: true))
+    .addItem(ListGroupItem("Clear", onClick: .loadModal(path: "/clear"), color: .danger))
+    .addItem(.raw("<b>HTML</b>", url: "/x"))
+```
+
+- Kinds: `ListGroupItem(_:)` plain, `(_:url:)` link, `(_:onClick: JSCode)` button, `.raw(_:url:onClick:...)` unescaped HTML. All take `icon`, `badge`, `color: ContextColor`, `active`, `disabled`. Text/URLs are escaped.
+- Container is `<ul>`/`<ol>` for plain-only lists; any link or button item switches it to `<div>` (Bootstrap requirement).
+- Options: `flush`, `numbered`, `horizontal`, `id`.
+- `Badge(_:color:pill:)` standalone: `TableCell(Badge("New", color: .success))`; text is escaped.
 
 ## Tabs
 

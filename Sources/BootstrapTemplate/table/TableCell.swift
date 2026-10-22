@@ -40,6 +40,11 @@ public struct TableCell {
         self.alignment = alignment
     }
 
+    public init(_ badge: Badge, alignment: TableAlignment? = nil) {
+        self.html = badge.output
+        self.alignment = alignment
+    }
+
     private init(html: String, alignment: TableAlignment?) {
         self.html = html
         self.alignment = alignment
