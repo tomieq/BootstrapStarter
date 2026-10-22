@@ -14,7 +14,8 @@ It bundles Bootstrap 5.3.1, jQuery 3.6.1, jQuery UI 1.13.3, Noty, and small brow
 - [Buttons](#buttons)
 - [Build tables](#build-tables)
 - [Paginate](#paginate)
-- [Escape HTML](#escape-html)
+- [Modals](#modals)
+- [Escape HTML and JavaScript](#escape-html-and-javascript)
 - [Compose JavaScript responses](#compose-javascript-responses)
 - [Public API reference](#public-api-reference)
 - [Security and operating notes](#security-and-operating-notes)
@@ -62,6 +63,7 @@ The package does not require a specific HTTP framework. The examples use Swifter
 | `Button` | Bootstrap button or link-button | `CustomStringConvertible` |
 | `Table` | Bootstrap table builder | `CustomStringConvertible` |
 | `Pagination` | Bootstrap page navigation | `CustomStringConvertible` |
+| `Modal` | Bootstrap modal dialog | `CustomStringConvertible` |
 | `JSCode` | One browser-side JavaScript command | `CustomStringConvertible` |
 | `JSResponse` | Ordered, newline-separated JavaScript commands | `CustomStringConvertible` |
 
@@ -291,9 +293,51 @@ let pagination = Pagination(page: page, pageSize: 20, totalItems: store.count,
 - With a single page the output is empty, unless `hideWhenSinglePage: false`.
 - Returned HTML is not wrapped in a container; place it next to the `Table` inside the element that `loadHtml` replaces.
 
-## Escape HTML
+## Modals
 
-`String.htmlEscaped` is public. It replaces `&`, `<`, `>`, `"` and `'`, making a value safe in HTML text and quoted attribute values. Use it for any untrusted value placed into templates, `Form.addRaw(html:)` or `TableCell.raw(_:)`. It does not escape for JavaScript or CSS contexts.
+`Modal` renders a Bootstrap modal dialog. `body` and `footer` entries are inserted as is, so they can be a `Form`, a `Table`, a `Button` or HTML; the title is escaped.
+
+```swift
+let modal = Modal(id: "editUser",
+                  title: "Edit user",
+                  body: form,
+                  footer: [Button("Cancel", onClick: .hideModal, style: .secondary)],
+                  size: .large,
+                  centered: true)
+```
+
+Options: `size` (`.small`, `.large`, `.extraLarge`, `.fullscreen`), `centered`, `scrollable`, `staticBackdrop` (no close on outside click or Esc) and `closeButton` (header X, default `true`).
+
+Open it from the page with `JSCode`:
+
+| Case | Behavior |
+| --- | --- |
+| `.loadModal(path:)` | Fetches the modal HTML from `path`, puts it in a `#modalContainer` element (created on demand), shows the first `.modal` in it, and removes it when closed. Any modal already loaded this way is replaced. |
+| `.showModal(domID:)` | Shows a modal already present in the page. Pass a selector such as `"#confirm"`. |
+| `.hideModal` | Hides every open modal. |
+
+```swift
+// Table row action
+Button("Edit", onClick: .loadModal(path: "/users/1/edit"), style: .primary, .small)
+
+// GET /users/1/edit returns the modal fragment
+server.get["users/1/edit"] = { _, _ in .ok(.html(modal)) }
+
+// AJAX form submit inside the modal: close it and refresh the table
+JSResponse(.hideModal,
+           .showSuccess("Saved"),
+           .loadHtml(path: "/users/table", domID: "#usersTable"))
+```
+
+- Put the `Form` (with `ajax: true` and its own submit button) in the modal body. Footer buttons render with `type="button"` and cannot submit a form.
+- The bundled `modal.js` is loaded by every `BootstrapTemplate` page and needs the bundled Bootstrap bundle; it is served together with the other assets.
+- `loadModal` and `showModal` escape their arguments for JavaScript; the other `JSCode` cases do not.
+
+## Escape HTML and JavaScript
+
+`String.htmlEscaped` is public. It replaces `&`, `<`, `>`, `"` and `'`, making a value safe in HTML text and quoted attribute values. Use it for any untrusted value placed into templates, `Form.addRaw(html:)` or `TableCell.raw(_:)`.
+
+`String.jsEscaped` is public too. It escapes `\`, `'`, newlines and `</` so a value can be placed inside a single-quoted JavaScript string literal, for example in `JSCode.custom(code:)` or the older `JSCode` cases, which do not escape their arguments. Notification text is rendered as HTML by Noty, so combine both: `.showSuccess(name.htmlEscaped.jsEscaped)`. Neither helper escapes for CSS contexts.
 
 ## Compose JavaScript responses
 
@@ -346,6 +390,7 @@ let response = JSResponse(.showSuccess("Saved"), AppCommand.refresh)
 | `.loadJS(path:)` | Loads and runs one script. |
 | `.loadMultipleJS(paths:)` | Loads and runs several scripts. |
 | `.loadHtmlAndJS(htmlPath:htmlDomID:jsPath:)` | Loads HTML into a selector, then loads one script. |
+| `.loadModal(path:)`, `.showModal(domID:)`, `.hideModal` | Modal commands; see [Modals](#modals). |
 | `.showSuccess(_)`, `.showError(_)`, `.showWarning(_)`, `.showInfo(_)` | Shows a Noty notification using the bundled notification helpers. |
 | `.custom(code:)` | Emits the supplied JavaScript unchanged. |
 | `.submitForm(path:domID:)` | Intended to call the bundled form helper; see the compatibility note below. |
@@ -356,7 +401,7 @@ let response = JSResponse(.showSuccess("Saved"), AppCommand.refresh)
 
 - The bundled dynamic loaders add a cache-busting query parameter and depend on jQuery.
 - The page template loads the required jQuery, Noty, and helper scripts automatically, provided their static URLs are served.
-- `JSCode` interpolates paths and notification text directly into JavaScript string literals. Do not pass untrusted values without JavaScript-string escaping.
+- `JSCode` interpolates paths and notification text directly into JavaScript string literals. Do not pass untrusted values without JavaScript-string escaping; use `String.jsEscaped`.
 - In the current implementation, `.submitForm(path:domID:)` emits a malformed JavaScript string. Use `Form(ajax: true)` or `.custom(code:)` with correctly escaped JavaScript until that API is corrected.
 
 ## Public API reference
@@ -414,6 +459,7 @@ public enum JSCode: CustomStringConvertible {
     case loadJS(path: String)
     case loadMultipleJS(paths: [String])
     case loadHtmlAndJS(htmlPath: String, htmlDomID: String, jsPath: String)
+    case loadModal(path: String), showModal(domID: String), hideModal
     case showSuccess(String), showError(String), showWarning(String), showInfo(String)
     case custom(code: String)
 }
@@ -484,7 +530,19 @@ public struct Pagination: CustomStringConvertible {
 public enum PaginationSize { case small, large }
 public enum PaginationAlignment { case left, center, right }
 
-extension String { public var htmlEscaped: String { get } }
+public struct Modal: CustomStringConvertible {
+    public init(id: String, title: String, body: CustomStringConvertible,
+                footer: [CustomStringConvertible] = [], size: ModalSize? = nil,
+                centered: Bool = false, scrollable: Bool = false,
+                staticBackdrop: Bool = false, closeButton: Bool = true)
+    public var output: String { get }
+}
+public enum ModalSize { case small, large, extraLarge, fullscreen }
+
+extension String {
+    public var htmlEscaped: String { get }
+    public var jsEscaped: String { get }
+}
 ```
 
 Properties not shown as public in this list are implementation details. In particular, option models expose construction but not public `label` or `value` properties.
@@ -502,7 +560,7 @@ Properties not shown as public in this list are implementation details. In parti
 When modifying an application that uses this package:
 
 1. Import `BootstrapTemplate`, not the repository name.
-2. Treat `BootstrapTemplate`, `Form`, `Button`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, and `String.htmlEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` in the application.
+2. Treat `BootstrapTemplate`, `Form`, `Button`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
 3. Preserve static serving for `BootstrapTemplate.absolutePath(for:)`; without it, every generated page is missing its bundled CSS and JavaScript.
 4. Use a CSS selector such as `"#content"` for `JSCode.loadHtml` and `JSCode.loadHtmlAndJS` target arguments.
 5. Prefer explicit form IDs when any client code needs to select fields. Generated IDs are intentionally non-deterministic.

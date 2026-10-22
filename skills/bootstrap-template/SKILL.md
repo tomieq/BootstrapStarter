@@ -17,8 +17,10 @@ It is built on top of [Template.swift](https://github.com/tomieq/Template.swift)
 | `Table` / `TableCell` / `TableColumn` | Bootstrap table builder |
 | `Button` | Bootstrap button or link-button, usable anywhere |
 | `Pagination` | Bootstrap page navigation |
+| `Modal` | Bootstrap modal dialog |
 | `FormSelectModel`, `FormRadioModel`, `ButtonStyle`, `TableStyle`, `TableRowStyle`, `TableAlignment` | Helper types |
 | `String.htmlEscaped` | Public HTML escaping helper |
+| `String.jsEscaped` | Public escaping for single-quoted JS string literals |
 
 All of them are `CustomStringConvertible`; `description` renders the output.
 
@@ -210,6 +212,29 @@ Pagination(page: page, pageSize: 20, totalItems: store.count, alignment: .center
 - `href` is always rendered (works without JS); `onClick` runs the `JSCode` and cancels the navigation, enabling partial reloads.
 - Output is empty for a single page unless `hideWhenSinglePage: false`. Output is not wrapped in a container: put it beside the `Table` inside the element that `loadHtml` replaces.
 
+## Modal
+
+`Modal` is a value type rendering a Bootstrap modal. `body` and `footer: [CustomStringConvertible]` are inserted as is (Form, Table, Button, HTML); `title` and `id` are escaped.
+
+```swift
+Modal(id: "editUser", title: "Edit user", body: form,
+      footer: [Button("Cancel", onClick: .hideModal, style: .secondary)],
+      size: .large, centered: true)
+```
+
+Options: `size` (`.small/.large/.extraLarge/.fullscreen`), `centered`, `scrollable`, `staticBackdrop`, `closeButton` (default true).
+
+| `JSCode` | Effect |
+| --- | --- |
+| `.loadModal(path:)` | GET the modal fragment from `path`, load it into `#modalContainer` (auto-created), show it, remove it when closed; replaces a previously loaded modal |
+| `.showModal(domID:)` | Show a modal already in the page; `domID` is a selector (`"#confirm"`) |
+| `.hideModal` | Hide all open modals |
+
+Typical flow: `Button("Edit", onClick: .loadModal(path: "/users/1/edit"))` -> endpoint returns `.ok(.html(modal))` -> the Form inside (`ajax: true`, own submit button) posts and the handler returns `JSResponse(.hideModal, .showSuccess("Saved"), .loadHtml(path: "/users/table", domID: "#usersTable"))`.
+
+- Footer `Button`s are `type="button"`; they cannot submit a form, so keep the submit in the form body.
+- `loadModal`/`showModal` escape their arguments for JS; other `JSCode` cases do not.
+
 ## JavaScript responses
 
 `JSResponse` joins `JSCode` commands (or any `CustomStringConvertible`/`String`) with newlines. Return it as JavaScript (`.ok(.js(...))` in Swifter); the browser executes it.
@@ -234,13 +259,14 @@ JSResponse {
 | `.loadHtml(path:domID:)` | Empty selector, load HTML from `path` into it, run scripts in it |
 | `.loadJS(path:)` / `.loadMultipleJS(paths:)` | Load and run script(s) |
 | `.loadHtmlAndJS(htmlPath:htmlDomID:jsPath:)` | Load HTML then a script |
+| `.loadModal(path:)` / `.showModal(domID:)` / `.hideModal` | Modal commands, see Modal |
 | `.custom(code:)` | Raw JavaScript |
 | `.submitForm(path:domID:)` | BROKEN (malformed output); do not use |
 
 Rules:
 - `domID` / `htmlDomID` must be a jQuery selector: `"#content"`, not `"content"`.
 - The result-builder form does not support `if`/`for`; use `.add(...)` for conditionals.
-- Notification text and paths are interpolated into single-quoted JS strings. Escape untrusted values (`\`, `'`, newlines, `</script>`), and HTML-escape text shown in toasts, because Noty renders HTML.
+- Notification text and paths are interpolated into single-quoted JS strings. Escape untrusted values with `.jsEscaped` (handles `\`, `'`, newlines, `</`), and HTML-escape text shown in toasts with `.htmlEscaped` first, because Noty renders HTML: `.showSuccess(name.htmlEscaped.jsEscaped)`.
 
 ## AJAX forms with Swifter
 
@@ -258,13 +284,6 @@ struct ContactInput: Decodable {
     let email: String
     let message: String?
     let subscribe: String?      // unchecked checkbox is not sent, so keep it optional
-}
-
-func jsEscaped(_ s: String) -> String {   // escape for single-quoted JS string
-    s.replacingOccurrences(of: "\\", with: "\\\\")
-     .replacingOccurrences(of: "'", with: "\\'")
-     .replacingOccurrences(of: "\n", with: "\\n")
-     .replacingOccurrences(of: "</", with: "<\\/")
 }
 
 func contactForm() -> Form {
@@ -300,7 +319,7 @@ server.post["contact"] = { request, _ in
         return .ok(.js(response))
     }
     // ... persist input ...
-    response.add(.showSuccess("Thanks, \(jsEscaped(input.name.htmlEscaped))!"))
+    response.add(.showSuccess("Thanks, \(input.name.htmlEscaped.jsEscaped)!"))
     response.add(.custom(code: "$('#contactForm')[0].reset();"))
     return .ok(.js(response))
 }

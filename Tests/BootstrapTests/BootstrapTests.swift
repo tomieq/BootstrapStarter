@@ -12,6 +12,11 @@ final class BootstrapTests: XCTestCase {
         XCTAssertFalse(unselectedCheckbox.output.contains("id=\"terms\" checked>"))
     }
 
+    func testEscapingHelpers() {
+        XCTAssertEqual("<a href=\"x\">&'</a>".htmlEscaped, "&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;")
+        XCTAssertEqual("it's\n\\ </script>".jsEscaped, "it\\'s\\n\\\\ <\\/script>")
+    }
+
     func testCutFilepath() throws {
         var (directory, filename, fileExtension) = BootstrapTemplate.cut("/res/bootstrap/css/file.js")
         XCTAssertEqual(directory, "shared/res/bootstrap/css")

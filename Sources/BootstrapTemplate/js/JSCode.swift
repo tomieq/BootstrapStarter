@@ -14,6 +14,11 @@ public enum JSCode {
     case loadMultipleJS(paths: [String])
     case loadHtmlAndJS(htmlPath: String, htmlDomID: String, jsPath: String)
     
+    // modals
+    case loadModal(path: String)
+    case showModal(domID: String)
+    case hideModal
+    
     // notifications
     case showSuccess(String)
     case showError(String)
@@ -36,6 +41,12 @@ extension JSCode: CustomStringConvertible {
             "runScripts(['\(paths.joined(separator: "', '"))']);"
         case .loadHtmlAndJS(let htmlPath, let htmlDomID, let jsPath):
             "loadHtmlThenRunScripts('\(htmlPath)', '\(htmlDomID)', ['\(jsPath)']);"
+        case .loadModal(let path):
+            "loadModal('\(path.jsEscaped)');"
+        case .showModal(let domID):
+            "showModal('\(domID.jsEscaped)');"
+        case .hideModal:
+            "hideModals();"
         case .showSuccess(let message):
             "showSuccess('\(message)');"
         case .showError(let message):
