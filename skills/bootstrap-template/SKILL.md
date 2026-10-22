@@ -16,6 +16,7 @@ It is built on top of [Template.swift](https://github.com/tomieq/Template.swift)
 | `JSCode` / `JSResponse` | JavaScript commands returned to the browser |
 | `Table` / `TableCell` / `TableColumn` | Bootstrap table builder |
 | `Button` | Bootstrap button or link-button, usable anywhere |
+| `Pagination` | Bootstrap page navigation |
 | `FormSelectModel`, `FormRadioModel`, `ButtonStyle`, `TableStyle`, `TableRowStyle`, `TableAlignment` | Helper types |
 | `String.htmlEscaped` | Public HTML escaping helper |
 
@@ -194,6 +195,20 @@ table.addRow(["x", "1", .link("Open", url: "/x")], style: .warning)
 - `TableStyle`: `.striped`, `.hover`, `.bordered`, `.borderless`, `.small`, `.dark` (defaults `[.striped, .hover]`). `TableRowStyle`: `.primary`...`.dark`, `.active`.
 - `responsive: true` (default) wraps the table in `div.table-responsive`.
 - To refresh a table after an action, wrap it in a container and return `.loadHtml(path:domID:)` pointing at an endpoint that returns the table.
+
+## Pagination
+
+`Pagination` is a value type rendering Bootstrap page navigation (prev/next, first/last, window of pages, ellipses). Page is clamped to the valid range.
+
+```swift
+Pagination(page: page, pageSize: 20, totalItems: store.count, alignment: .center,
+           href: { "/users?page=\($0)" },
+           onClick: { .loadHtml(path: "/users/table?page=\($0)", domID: "#usersTable") })
+```
+
+- `Pagination(page:totalPages:)` when the page count is known. Options: `window` (default 2), `size` (`.small`/`.large`), `alignment` (`.left`/`.center`/`.right`).
+- `href` is always rendered (works without JS); `onClick` runs the `JSCode` and cancels the navigation, enabling partial reloads.
+- Output is empty for a single page unless `hideWhenSinglePage: false`. Output is not wrapped in a container: put it beside the `Table` inside the element that `loadHtml` replaces.
 
 ## JavaScript responses
 

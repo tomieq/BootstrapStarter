@@ -13,6 +13,7 @@ It bundles Bootstrap 5.3.1, jQuery 3.6.1, jQuery UI 1.13.3, Noty, and small brow
 - [Build forms](#build-forms)
 - [Buttons](#buttons)
 - [Build tables](#build-tables)
+- [Paginate](#paginate)
 - [Escape HTML](#escape-html)
 - [Compose JavaScript responses](#compose-javascript-responses)
 - [Public API reference](#public-api-reference)
@@ -60,6 +61,7 @@ The package does not require a specific HTTP framework. The examples use Swifter
 | `Form` | Bootstrap-styled HTML form builder | `CustomStringConvertible` |
 | `Button` | Bootstrap button or link-button | `CustomStringConvertible` |
 | `Table` | Bootstrap table builder | `CustomStringConvertible` |
+| `Pagination` | Bootstrap page navigation | `CustomStringConvertible` |
 | `JSCode` | One browser-side JavaScript command | `CustomStringConvertible` |
 | `JSResponse` | Ordered, newline-separated JavaScript commands | `CustomStringConvertible` |
 
@@ -272,6 +274,23 @@ table.addRow(["Total", "42", .link("Report", url: "/report")], style: .warning)
 
 `TableStyle` cases are `.striped`, `.hover`, `.bordered`, `.borderless`, `.small`, `.dark` (default `[.striped, .hover]`). `TableRowStyle` cases are `.primary`, `.secondary`, `.success`, `.danger`, `.warning`, `.info`, `.light`, `.dark`, `.active`. With `responsive: true` (default) the table is wrapped in `div.table-responsive`.
 
+## Paginate
+
+`Pagination` renders Bootstrap page navigation: previous/next, first and last page, a window of pages around the current one, and ellipses for gaps. The current page is clamped to the valid range.
+
+```swift
+let pagination = Pagination(page: page, pageSize: 20, totalItems: store.count,
+                            alignment: .center,
+                            href: { "/users?page=\($0)" },
+                            onClick: { .loadHtml(path: "/users/table?page=\($0)", domID: "#usersTable") })
+```
+
+- Use `Pagination(page:totalPages:)` when the page count is already known.
+- `href` is always rendered, so the links work without JavaScript. With `onClick`, the browser runs the returned `JSCode` and cancels the navigation (`return false`), which allows partial reloads of a table container.
+- `window` (default 2) is the number of pages shown on each side of the current page. `size` is `.small` or `.large`; `alignment` is `.left`, `.center` or `.right`.
+- With a single page the output is empty, unless `hideWhenSinglePage: false`.
+- Returned HTML is not wrapped in a container; place it next to the `Table` inside the element that `loadHtml` replaces.
+
 ## Escape HTML
 
 `String.htmlEscaped` is public. It replaces `&`, `<`, `>`, `"` and `'`, making a value safe in HTML text and quoted attribute values. Use it for any untrusted value placed into templates, `Form.addRaw(html:)` or `TableCell.raw(_:)`. It does not escape for JavaScript or CSS contexts.
@@ -449,6 +468,22 @@ public enum TableStyle { case striped, hover, bordered, borderless, small, dark 
 public enum TableRowStyle { case primary, secondary, success, danger, warning, info, light, dark, active }
 public enum TableAlignment { case left, center, right }
 
+public struct Pagination: CustomStringConvertible {
+    public init(page: Int, totalPages: Int, window: Int = 2,
+                size: PaginationSize? = nil, alignment: PaginationAlignment? = nil,
+                hideWhenSinglePage: Bool = true,
+                href: @escaping (Int) -> String = { _ in "#" },
+                onClick: ((Int) -> JSCode)? = nil)
+    public init(page: Int, pageSize: Int, totalItems: Int, window: Int = 2,
+                size: PaginationSize? = nil, alignment: PaginationAlignment? = nil,
+                hideWhenSinglePage: Bool = true,
+                href: @escaping (Int) -> String = { _ in "#" },
+                onClick: ((Int) -> JSCode)? = nil)
+    public var output: String { get }
+}
+public enum PaginationSize { case small, large }
+public enum PaginationAlignment { case left, center, right }
+
 extension String { public var htmlEscaped: String { get } }
 ```
 
@@ -467,7 +502,7 @@ Properties not shown as public in this list are implementation details. In parti
 When modifying an application that uses this package:
 
 1. Import `BootstrapTemplate`, not the repository name.
-2. Treat `BootstrapTemplate`, `Form`, `Button`, `Table`, `TableCell`, `TableColumn`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, and `String.htmlEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` in the application.
+2. Treat `BootstrapTemplate`, `Form`, `Button`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, and `String.htmlEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` in the application.
 3. Preserve static serving for `BootstrapTemplate.absolutePath(for:)`; without it, every generated page is missing its bundled CSS and JavaScript.
 4. Use a CSS selector such as `"#content"` for `JSCode.loadHtml` and `JSCode.loadHtmlAndJS` target arguments.
 5. Prefer explicit form IDs when any client code needs to select fields. Generated IDs are intentionally non-deterministic.
