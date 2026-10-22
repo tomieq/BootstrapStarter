@@ -17,6 +17,7 @@ It is built on top of [Template.swift](https://github.com/tomieq/Template.swift)
 | `Table` / `TableCell` / `TableColumn` | Bootstrap table builder |
 | `Button` | Bootstrap button or link-button, usable anywhere |
 | `Icon` | Bootstrap Icons glyph (pinned bundled snapshot; opt-in via `page.addIcons()`) |
+| `Tabs` | Bootstrap tabs/pills with optional lazy-loaded panes |
 | `Pagination` | Bootstrap page navigation |
 | `Modal` | Bootstrap modal dialog |
 | `ConfirmDialog` | Client-side confirmation dialog (used via `JSCode.confirm`) |
@@ -177,6 +178,22 @@ Button("Open", url: "/users/1", attributes: ["title": "Details"], style: .succes
 - Use it as `Form.addRaw(html: button)`, `page.body`, or `TableCell(button)`.
 - `icon:` puts an `Icon` before the label (`Button("Delete", icon: .trash, ...)`); an empty label makes it icon-only, so pass `attributes: ["aria-label": "Delete"]`.
 
+## Tabs
+
+`Tabs` (class, chainable `add...`) renders Bootstrap tabs and panes. `id` is required and unique per page; panes get ids `<id>-1`, `<id>-2`, ... or the tab's own `id:`.
+
+```swift
+Tabs(id: "account", style: .pills)
+    .addTab("Profile", icon: .person, content: profileForm)
+    .addTab("Security", icon: .lock, content: securityForm, active: true)
+    .addLazyTab("Activity", icon: .clock, path: "/account/activity")
+    .addTab("Billing", content: "<p>n/a</p>", disabled: true)
+```
+
+- `content` is inserted as is (Form, Table, HTML); titles are escaped. First enabled tab is active unless one passes `active: true`.
+- `addLazyTab(_:path:)`: spinner, then GET `path` on first show (also when active from the start, including inside modals/fragments); retries on next show after a failure. Reload with `.refreshHtml(path:domID: "#account-3")`; select a tab with `.showTab(domID: "#account-2")`.
+- Options: `style` (`.tabs/.pills/.underline`), `fill`, `vertical`.
+
 ## Icon
 
 `Icon` renders `<i class="bi bi-trash" aria-hidden="true"></i>` from a pinned Bootstrap Icons 1.13.1 snapshot bundled in the package (CSS, woff2/woff fonts, MIT license). Opt-in: call `page.addIcons()` to load the stylesheet; the bundled assets must be served (fonts are requested relative to the stylesheet).
@@ -300,6 +317,7 @@ JSResponse().add(.showSuccess("Saved")).add(.hideModal).add(.refreshHtml(path: "
 | `.loadHtmlAndJS(htmlPath:htmlDomID:jsPath:)` | Load HTML then a script |
 | `.loadModal(path:)` / `.showModal(domID:)` / `.hideModal` | Modal commands, see Modal |
 | `.confirm(ConfirmDialog)` | Confirmation dialog, see Modal |
+| `.showTab(domID:)` | Select the tab whose pane has this selector, see Tabs |
 | `.redirect(path:)` / `.reload` | Navigate / reload (never redirect to untrusted URLs) |
 | `.scrollTo(domID:)` / `.copyToClipboard(String)` | Smooth scroll; copy text |
 | `.setTheme(BootstrapTheme)` / `.toggleTheme` | Change and persist color theme, see Themes |

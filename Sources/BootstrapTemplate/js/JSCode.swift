@@ -20,7 +20,10 @@ public enum JSCode {
     case loadModal(path: String)
     case showModal(domID: String)
     case hideModal
-    case confirm(ConfirmDialog)    
+    case confirm(ConfirmDialog)
+    
+    // Shows the tab whose pane has the given selector, e.g. "#users-2".
+    case showTab(domID: String)    
     // notifications; the optional icon needs `BootstrapTemplate.addIcons()`
     case showSuccess(String, icon: Icon? = nil)
     case showError(String, icon: Icon? = nil)
@@ -73,6 +76,8 @@ extension JSCode: CustomStringConvertible {
             "hideModals();"
         case .confirm(let dialog):
             dialog.output
+        case .showTab(let domID):
+            "showTab('\(domID.jsEscaped)');"
         case .showSuccess(let message, let icon):
             Self.notification("showSuccess", message, icon)
         case .showError(let message, let icon):

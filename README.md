@@ -15,6 +15,7 @@ It bundles Bootstrap 5.3.1, Bootstrap Icons 1.13.1, jQuery 3.6.1, jQuery UI 1.13
 - [Build tables](#build-tables)
 - [Paginate](#paginate)
 - [Modals](#modals)
+- [Tabs](#tabs)
 - [Icons](#icons)
 - [Escape HTML and JavaScript](#escape-html-and-javascript)
 - [Compose JavaScript responses](#compose-javascript-responses)
@@ -62,6 +63,7 @@ The package does not require a specific HTTP framework. The examples use Swifter
 | `BootstrapTemplate` | Full HTML document with bundled CSS and scripts | `CustomStringConvertible` |
 | `Form` | Bootstrap-styled HTML form builder | `CustomStringConvertible` |
 | `Button` | Bootstrap button or link-button | `CustomStringConvertible` |
+| `Tabs` | Bootstrap tabs or pills, with lazy-loaded panes | `CustomStringConvertible` |
 | `Icon` | Bootstrap Icons glyph | `CustomStringConvertible` |
 | `Table` | Bootstrap table builder | `CustomStringConvertible` |
 | `Pagination` | Bootstrap page navigation | `CustomStringConvertible` |
@@ -370,6 +372,27 @@ Button("Delete",
 - Defaults: title `"Confirm"`, labels `"OK"` and `"Cancel"`.
 - Opening a new confirmation replaces a pending one.
 
+## Tabs
+
+`Tabs` renders Bootstrap tabs (or pills) with their panes. Every `add...` returns the same `Tabs`.
+
+```swift
+let tabs = Tabs(id: "account", style: .pills)
+    .addTab("Profile", icon: .person, content: profileForm)
+    .addTab("Security", icon: .lock, content: securityForm, active: true)
+    .addLazyTab("Activity", icon: .clock, path: "/account/activity")
+    .addTab("Billing", content: "<p>Not available</p>", disabled: true)
+
+page.body = tabs
+```
+
+- `id` is required and must be unique on the page. Panes get the ids `account-1`, `account-2`, ... in order, or the `id:` you pass to a tab. Use simple ids (letters, digits, `-`, `_`).
+- `content` is inserted as is (a `Form`, a `Table`, HTML); titles are escaped. The first enabled tab is active unless a tab passes `active: true`. Disabled tabs cannot be selected.
+- `addLazyTab(_:path:)` shows a spinner and fetches its HTML from `path` the first time the tab is shown; the result stays until the page is reloaded. If the request fails, an error toast appears and the next time the tab is shown it retries. A lazy tab that is active from the start is loaded when the page or fragment appears.
+- To reload a lazy pane, use `.refreshHtml(path: "/account/activity", domID: "#account-3")`. To select a tab from JavaScript responses, use `.showTab(domID: "#account-2")`.
+- Options: `style` is `.tabs`, `.pills` or `.underline`; `fill: true` spreads the tabs over the full width; `vertical: true` puts the tab list on the left.
+- The lazy loader runs on every `BootstrapTemplate` page (`tabs.js`) and also picks up tabs inside modals and fragments loaded with `loadHtml`.
+
 ## Icons
 
 `Icon` renders a [Bootstrap Icons](https://icons.getbootstrap.com/) glyph as `<i class="bi bi-trash" aria-hidden="true"></i>`. The library bundles a pinned snapshot (v1.13.1: stylesheet, `woff2`/`woff` fonts and the MIT license) under `bootstrap-icons-1.13.1/`, so it does not change when upstream does. Icons are opt-in: call `addIcons()` on the page to load the stylesheet, and keep serving the bundled assets (the fonts are requested relative to the stylesheet).
@@ -461,6 +484,7 @@ let response = JSResponse(.showSuccess("Saved"), AppCommand.refresh)
 | `.loadHtmlAndJS(htmlPath:htmlDomID:jsPath:)` | Loads HTML into a selector, then loads one script. |
 | `.loadModal(path:)`, `.showModal(domID:)`, `.hideModal` | Modal commands; see [Modals](#modals). |
 | `.confirm(_:)` | Opens a `ConfirmDialog`; see [Confirmation dialogs](#confirmation-dialogs). |
+| `.showTab(domID:)` | Selects the tab whose pane has this selector (for example `"#account-2"`); see [Tabs](#tabs). |
 | `.showSuccess(_:icon:)`, `.showError(_:icon:)`, `.showWarning(_:icon:)`, `.showInfo(_:icon:)` | Shows a Noty notification using the bundled notification helpers. The text is rendered as HTML. The optional [`Icon`](#icons) is placed before the text (the page needs `addIcons()`), for example `.showSuccess("Saved", icon: .check)`. |
 | `.redirect(path:)`, `.reload` | Navigates to a URL or reloads the page. Never pass an untrusted URL to `.redirect`. |
 | `.scrollTo(domID:)` | Smooth-scrolls the selector's first element into view. |
@@ -543,6 +567,7 @@ public enum JSCode: CustomStringConvertible {
     case loadHtmlAndJS(htmlPath: String, htmlDomID: String, jsPath: String)
     case loadModal(path: String), showModal(domID: String), hideModal
     case confirm(ConfirmDialog)
+    case showTab(domID: String)
     case showSuccess(String, icon: Icon? = nil), showError(String, icon: Icon? = nil)
     case showWarning(String, icon: Icon? = nil), showInfo(String, icon: Icon? = nil)
     case redirect(path: String), reload, scrollTo(domID: String), copyToClipboard(String)
@@ -640,6 +665,16 @@ public struct Modal: CustomStringConvertible {
 }
 public enum ModalSize { case small, large, extraLarge, fullscreen }
 
+public class Tabs: CustomStringConvertible {
+    public init(id: String, style: TabsStyle = .tabs, fill: Bool = false, vertical: Bool = false)
+    @discardableResult public func addTab(_ title: String, icon: Icon? = nil, id: String? = nil,
+        content: CustomStringConvertible, active: Bool = false, disabled: Bool = false) -> Tabs
+    @discardableResult public func addLazyTab(_ title: String, icon: Icon? = nil, id: String? = nil,
+        path: String, active: Bool = false, disabled: Bool = false) -> Tabs
+    public var output: String { get }
+}
+public enum TabsStyle { case tabs, pills, underline }
+
 public struct ConfirmDialog: CustomStringConvertible {
     public init(_ message: String, title: String = "Confirm", confirmLabel: String = "OK",
                 cancelLabel: String = "Cancel", confirmStyle: ButtonStyle = .primary,
@@ -668,7 +703,7 @@ Properties not shown as public in this list are implementation details. In parti
 When modifying an application that uses this package:
 
 1. Import `BootstrapTemplate`, not the repository name.
-2. Treat `BootstrapTemplate`, `Form`, `Button`, `Icon`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `ConfirmDialog`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
+2. Treat `BootstrapTemplate`, `Form`, `Button`, `Icon`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `ConfirmDialog`, `Tabs`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
 3. Preserve static serving for `BootstrapTemplate.absolutePath(for:)`; without it, every generated page is missing its bundled CSS and JavaScript.
 4. Use a CSS selector such as `"#content"` for `JSCode.loadHtml` and `JSCode.loadHtmlAndJS` target arguments.
 5. Prefer explicit form IDs when any client code needs to select fields. Generated IDs are intentionally non-deterministic.
