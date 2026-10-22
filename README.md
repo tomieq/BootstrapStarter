@@ -102,11 +102,25 @@ let html = page.description
 | `title: String?` | Adds the document title when assigned a non-`nil` value. The getter intentionally returns `nil`; treat this as write-only. |
 | `body: CustomStringConvertible?` | Inserts page body HTML when assigned a non-`nil` value. The getter intentionally returns `nil`; treat this as write-only. |
 | `addMeta(name:value:)` | Adds `<meta name="…" content="…">`. Call repeatedly for multiple tags. |
+| `theme: BootstrapTheme?` | Default color theme (`.light`, `.dark`, `.auto`); see [Themes](#themes). Write-only like `title`. |
 | `addFavicon(url:type:)` | Adds a favicon `<link>`. Call with a URL and MIME type such as `image/svg+xml`. |
 | `addCSS(url:)` / `addJS(url:)` | Adds a stylesheet or script URL to the generated document. |
 | `addCSS(code:)` / `addJS(code:)` | Adds inline CSS or JavaScript. Each accepts any `CustomStringConvertible`. |
 
 External style sheets are inserted after the bundled style sheets. External scripts and inline JavaScript run after the bundled scripts, near the end of `<body>`.
+
+### Themes
+
+Bootstrap 5.3 color modes are controlled through `data-bs-theme`. Set the default for a page and let users override it:
+
+```swift
+page.theme = .auto            // .light, .dark, or .auto (follows the operating system)
+
+Button("Toggle dark mode", onClick: .toggleTheme, style: .secondary, .small)
+Button("Dark", onClick: .setTheme(.dark))
+```
+
+`.setTheme(_:)` and `.toggleTheme` store the choice in the browser's `localStorage` (key `theme`). A stored choice wins over `page.theme`, and a small script in `<head>` applies it before the first paint, so there is no flash. `theme` must be assigned before the page is rendered, and only the first assignment has effect.
 
 ## Serve bundled browser assets
 
@@ -332,7 +346,6 @@ JSResponse(.hideModal,
 
 - Put the `Form` (with `ajax: true` and its own submit button) in the modal body. Footer buttons render with `type="button"` and cannot submit a form.
 - The bundled `modal.js` is loaded by every `BootstrapTemplate` page and needs the bundled Bootstrap bundle; it is served together with the other assets.
-- `loadModal` and `showModal` escape their arguments for JavaScript; the other `JSCode` cases do not.
 
 ### Confirmation dialogs
 
@@ -359,7 +372,7 @@ Button("Delete",
 
 `String.htmlEscaped` is public. It replaces `&`, `<`, `>`, `"` and `'`, making a value safe in HTML text and quoted attribute values. Use it for any untrusted value placed into templates, `Form.addRaw(html:)` or `TableCell.raw(_:)`.
 
-`String.jsEscaped` is public too. It escapes `\`, `'`, newlines and `</` so a value can be placed inside a single-quoted JavaScript string literal, for example in `JSCode.custom(code:)` or the older `JSCode` cases, which do not escape their arguments. Notification text is rendered as HTML by Noty, so combine both: `.showSuccess(name.htmlEscaped.jsEscaped)`. Neither helper escapes for CSS contexts.
+`String.jsEscaped` is public too. It escapes `\`, `'`, newlines and `</` so a value can be placed inside a single-quoted JavaScript string literal, for example in `JSCode.custom(code:)`. Every `JSCode` case that takes a string already applies it, so do not escape those arguments again. Notification text is rendered as HTML by Noty, so pass `.showSuccess(name.htmlEscaped)`. Neither helper escapes for CSS contexts.
 
 ## Compose JavaScript responses
 
@@ -373,6 +386,15 @@ let response = JSResponse(
 )
 
 let script = response.description
+```
+
+`add` returns the response, so commands can also be chained:
+
+```swift
+return .ok(.js(JSResponse()
+    .add(.showSuccess("Saved"))
+    .add(.hideModal)
+    .add(.refreshHtml(path: "/users/table", domID: "#usersTable"))))
 ```
 
 For conditional construction, use `add` or the result-builder initializer:
@@ -409,14 +431,24 @@ let response = JSResponse(.showSuccess("Saved"), AppCommand.refresh)
 | Case | Generated browser action |
 | --- | --- |
 | `.loadHtml(path:domID:)` | Replaces the supplied jQuery selector's contents with HTML loaded from `path`, then runs any scripts in that HTML response. Pass a selector such as `"#content"`, not an unprefixed DOM ID. |
+| `.refreshHtml(path:domID:)` | Like `.loadHtml`, but keeps the old content visible until the new HTML arrives (no flicker). |
+| `.poll(path:domID:interval:)`, `.stopPolling(domID:)` | Reloads the selector's HTML every `interval` seconds (minimum 0.25) until stopped or the element disappears. Request errors during polling are ignored. A selector has one poller; starting again replaces it. |
 | `.loadJS(path:)` | Loads and runs one script. |
 | `.loadMultipleJS(paths:)` | Loads and runs several scripts. |
 | `.loadHtmlAndJS(htmlPath:htmlDomID:jsPath:)` | Loads HTML into a selector, then loads one script. |
 | `.loadModal(path:)`, `.showModal(domID:)`, `.hideModal` | Modal commands; see [Modals](#modals). |
 | `.confirm(_:)` | Opens a `ConfirmDialog`; see [Confirmation dialogs](#confirmation-dialogs). |
-| `.showSuccess(_)`, `.showError(_)`, `.showWarning(_)`, `.showInfo(_)` | Shows a Noty notification using the bundled notification helpers. |
+| `.showSuccess(_)`, `.showError(_)`, `.showWarning(_)`, `.showInfo(_)` | Shows a Noty notification using the bundled notification helpers. The text is rendered as HTML. |
+| `.redirect(path:)`, `.reload` | Navigates to a URL or reloads the page. Never pass an untrusted URL to `.redirect`. |
+| `.scrollTo(domID:)` | Smooth-scrolls the selector's first element into view. |
+| `.copyToClipboard(_)` | Copies text to the clipboard (uses the Clipboard API on secure contexts, a fallback otherwise). |
+| `.setTheme(_:)`, `.toggleTheme` | Changes and stores the color theme; see [Themes](#themes). |
+| `.setHtml(domID:html:)`, `.appendHtml(domID:html:)` | Replaces or appends the selector's HTML. `html` is inserted as is and its scripts run. |
+| `.remove(domID:)` | Removes the selected elements. |
+| `.addClass(domID:name:)`, `.removeClass(domID:name:)` | Adds or removes a CSS class. |
+| `.setDisabled(domID:disabled:)` | Sets the `disabled` property, for example on a submit button during a long operation. |
 | `.custom(code:)` | Emits the supplied JavaScript unchanged. |
-| `.submitForm(path:domID:)` | Intended to call the bundled form helper; see the compatibility note below. |
+| `.submitForm(path:domID:)` | Posts the form selected by `domID` in the background through the bundled helper. |
 
 `JSResponse` has both variadic and result-builder constructors, plus matching `add` overloads. The result builder accepts a sequence of `CustomStringConvertible` expressions; it does not support control-flow expressions such as `if` inside the builder.
 
@@ -424,8 +456,8 @@ let response = JSResponse(.showSuccess("Saved"), AppCommand.refresh)
 
 - The bundled dynamic loaders add a cache-busting query parameter and depend on jQuery.
 - The page template loads the required jQuery, Noty, and helper scripts automatically, provided their static URLs are served.
-- `JSCode` interpolates paths and notification text directly into JavaScript string literals. Do not pass untrusted values without JavaScript-string escaping; use `String.jsEscaped`.
-- In the current implementation, `.submitForm(path:domID:)` emits a malformed JavaScript string. Use `Form(ajax: true)` or `.custom(code:)` with correctly escaped JavaScript until that API is corrected.
+- Every string argument of a `JSCode` case is escaped for a single-quoted JavaScript string literal (`String.jsEscaped`), so it cannot break out of the literal. Do not escape it yourself first, or it will be doubled. `html` arguments and `.custom(code:)` are not sanitized for HTML or script content.
+- `.submitForm(path:domID:)` expects a selector for the form element; selectors must be passed with their prefix, such as `"#contactForm"`.
 
 ## Public API reference
 
@@ -437,6 +469,7 @@ public class BootstrapTemplate: CustomStringConvertible {
     public init()
     public var title: String? { get set }
     public var body: CustomStringConvertible? { get set }
+    public var theme: BootstrapTheme? { get set }
     public func addJS(code: CustomStringConvertible)
     public func addJS(url: String)
     public func addCSS(code: CustomStringConvertible)
@@ -479,14 +512,24 @@ public class Form: CustomStringConvertible {
 public enum JSCode: CustomStringConvertible {
     case submitForm(path: String, domID: String)
     case loadHtml(path: String, domID: String)
+    case refreshHtml(path: String, domID: String)
     case loadJS(path: String)
     case loadMultipleJS(paths: [String])
     case loadHtmlAndJS(htmlPath: String, htmlDomID: String, jsPath: String)
     case loadModal(path: String), showModal(domID: String), hideModal
     case confirm(ConfirmDialog)
     case showSuccess(String), showError(String), showWarning(String), showInfo(String)
+    case redirect(path: String), reload, scrollTo(domID: String), copyToClipboard(String)
+    case setTheme(BootstrapTheme), toggleTheme
+    case setHtml(domID: String, html: String), appendHtml(domID: String, html: String)
+    case remove(domID: String)
+    case addClass(domID: String, name: String), removeClass(domID: String, name: String)
+    case setDisabled(domID: String, disabled: Bool)
+    case poll(path: String, domID: String, interval: TimeInterval), stopPolling(domID: String)
     case custom(code: String)
 }
+
+public enum BootstrapTheme: String { case light, dark, auto }
 
 public class JSResponse: CustomStringConvertible {
     public init(_ code: CustomStringConvertible...)
@@ -580,7 +623,7 @@ Properties not shown as public in this list are implementation details. In parti
 
 ## Security and operating notes
 
-- **Escape at the boundary.** Page bodies, form labels, values, attributes, raw form HTML, metadata, CSS, JavaScript, and `JSCode` arguments are interpolated into templates or scripts. `Table` and `Button` escape their text, URLs and attribute values, and `String.htmlEscaped` is available for the rest, but the library does not escape JavaScript or CSS. Encode untrusted data for its exact output context before passing it in.
+- **Escape at the boundary.** Page bodies, form labels, values, attributes, raw form HTML, metadata, CSS, JavaScript, and `JSCode` arguments are interpolated into templates or scripts. `Table` and `Button` escape their text, URLs and attribute values, `JSCode` escapes its string arguments for JavaScript, and `String.htmlEscaped` is available for the rest, but the library does not escape CSS. Encode untrusted data for its exact output context before passing it in.
 - **Validate server requests normally.** Form generation does not add CSRF protection, authentication, authorization, validation, or rate limiting.
 - **Set a content-security policy deliberately.** Inline scripts and styles are generated by `addJS(code:)` and `addCSS(code:)`; a restrictive CSP needs nonces, hashes, or a policy that permits those blocks.
 - **Serve resources in deployment.** The package uses `Bundle.module` to locate copied resources. In a Linux container, ensure the SwiftPM-generated resource bundle (typically a `.resources` directory beside the executable) is copied into the runtime image along with the executable.
@@ -596,6 +639,7 @@ When modifying an application that uses this package:
 4. Use a CSS selector such as `"#content"` for `JSCode.loadHtml` and `JSCode.loadHtmlAndJS` target arguments.
 5. Prefer explicit form IDs when any client code needs to select fields. Generated IDs are intentionally non-deterministic.
 6. For AJAX forms, return executable JavaScript commands, usually `JSResponse`; remember that the bundled helper posts with `POST`.
-7. Encode all dynamic or user-controlled strings for their HTML, attribute, CSS, or JavaScript context before sending them to this library. Never use `addRaw(html:)` with untrusted content.
-8. Do not generate calls to `.submitForm(path:domID:)` until its malformed output has been fixed; use `Form(ajax: true)` or escaped `.custom(code:)` instead.
-9. When containerizing, retain the SwiftPM resource bundle and verify the static asset fallback against a deployed build.
+7. Encode dynamic or user-controlled strings for their HTML, attribute or CSS context before sending them to this library (`JSCode` string arguments are JavaScript-escaped automatically). Never use `addRaw(html:)` with untrusted content.
+8. `.submitForm(path:domID:)` takes a selector (`"#contactForm"`); prefer `Form(ajax: true)` when the form is generated by this library.
+9. Do not escape `JSCode` string arguments yourself; they are escaped already. HTML-escape text shown in notifications with `htmlEscaped`.
+10. When containerizing, retain the SwiftPM resource bundle and verify the static asset fallback against a deployed build.

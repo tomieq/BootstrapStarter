@@ -15,6 +15,17 @@ public class BootstrapTemplate {
         self.template = Template.cached(absolutePath: BootstrapTemplate.absolutePath(for: "templates/index.tpl.html")!)
     }
 
+    // Default theme; a choice saved by `JSCode.setTheme` in the browser takes precedence.
+    public var theme: BootstrapTheme? {
+        set {
+            guard let theme = newValue else { return }
+            self.template["theme"] = theme.rawValue
+        }
+        get {
+            nil
+        }
+    }
+
     public var title: String? {
         set {
             guard let title = newValue else { return }

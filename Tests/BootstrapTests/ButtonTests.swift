@@ -14,7 +14,7 @@ final class ButtonTests: XCTestCase {
         let html = Button("Del", onClick: .showInfo("it's \"x\""), style: .danger).output
 
         XCTAssertTrue(html.contains("class=\"btn btn-danger\""))
-        XCTAssertTrue(html.contains("onclick=\"showInfo(&#39;it&#39;s &quot;x&quot;&#39;);\""))
+        XCTAssertTrue(html.contains("onclick=\"showInfo(&#39;it\\&#39;s &quot;x&quot;&#39;);\""))
     }
 
     func testLinkButton() {

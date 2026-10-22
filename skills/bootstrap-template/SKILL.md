@@ -234,7 +234,6 @@ Options: `size` (`.small/.large/.extraLarge/.fullscreen`), `centered`, `scrollab
 Typical flow: `Button("Edit", onClick: .loadModal(path: "/users/1/edit"))` -> endpoint returns `.ok(.html(modal))` -> the Form inside (`ajax: true`, own submit button) posts and the handler returns `JSResponse(.hideModal, .showSuccess("Saved"), .loadHtml(path: "/users/table", domID: "#usersTable"))`.
 
 - Footer `Button`s are `type="button"`; they cannot submit a form, so keep the submit in the form body.
-- `loadModal`/`showModal` escape their arguments for JS; other `JSCode` cases do not.
 
 ### Confirmation dialog
 
@@ -268,24 +267,43 @@ JSResponse {
     JSCode.showInfo("Refreshing")
     "refreshWidgets();"
 }
-// .add(...) appends more later
+// .add(...) appends more later and returns the response, so it chains:
+JSResponse().add(.showSuccess("Saved")).add(.hideModal).add(.refreshHtml(path: "/t", domID: "#t"))
 ```
 
 | `JSCode` | Effect |
 | --- | --- |
-| `.showSuccess/.showError/.showWarning/.showInfo(String)` | Noty toast (top right) |
+| `.showSuccess/.showError/.showWarning/.showInfo(String)` | Noty toast (top right); text is rendered as HTML |
 | `.loadHtml(path:domID:)` | Empty selector, load HTML from `path` into it, run scripts in it |
+| `.refreshHtml(path:domID:)` | Same, but keeps old content until the new arrives (no flicker) |
+| `.poll(path:domID:interval:)` / `.stopPolling(domID:)` | Reload selector's HTML every `interval` s (min 0.25) until stopped or element gone; errors ignored |
 | `.loadJS(path:)` / `.loadMultipleJS(paths:)` | Load and run script(s) |
 | `.loadHtmlAndJS(htmlPath:htmlDomID:jsPath:)` | Load HTML then a script |
 | `.loadModal(path:)` / `.showModal(domID:)` / `.hideModal` | Modal commands, see Modal |
 | `.confirm(ConfirmDialog)` | Confirmation dialog, see Modal |
+| `.redirect(path:)` / `.reload` | Navigate / reload (never redirect to untrusted URLs) |
+| `.scrollTo(domID:)` / `.copyToClipboard(String)` | Smooth scroll; copy text |
+| `.setTheme(BootstrapTheme)` / `.toggleTheme` | Change and persist color theme, see Themes |
+| `.setHtml(domID:html:)` / `.appendHtml(domID:html:)` | Replace / append HTML (inserted as is, scripts run) |
+| `.remove(domID:)` | Remove elements |
+| `.addClass(domID:name:)` / `.removeClass(domID:name:)` | CSS class |
+| `.setDisabled(domID:disabled:)` | Set the `disabled` property |
 | `.custom(code:)` | Raw JavaScript |
-| `.submitForm(path:domID:)` | BROKEN (malformed output); do not use |
+| `.submitForm(path:domID:)` | Background POST of the form selected by `domID` (e.g. `"#contactForm"`) |
 
 Rules:
 - `domID` / `htmlDomID` must be a jQuery selector: `"#content"`, not `"content"`.
 - The result-builder form does not support `if`/`for`; use `.add(...)` for conditionals.
-- Notification text and paths are interpolated into single-quoted JS strings. Escape untrusted values with `.jsEscaped` (handles `\`, `'`, newlines, `</`), and HTML-escape text shown in toasts with `.htmlEscaped` first, because Noty renders HTML: `.showSuccess(name.htmlEscaped.jsEscaped)`.
+- Every string argument of a `JSCode` case is escaped for single-quoted JS literals automatically (`String.jsEscaped`); do not escape it again. `html` arguments and `.custom(code:)` are not sanitized. HTML-escape text shown in toasts with `.htmlEscaped`, because Noty renders HTML: `.showSuccess(name.htmlEscaped)`.
+
+## Themes
+
+`page.theme = .light / .dark / .auto` sets the default Bootstrap 5.3 color mode (`data-bs-theme`; `.auto` follows the OS). Assign it before rendering (write-only, first assignment wins). `JSCode.setTheme(_:)` / `.toggleTheme` change it in the browser and persist the choice in `localStorage` (`theme`); a stored choice overrides the page default and is applied in `<head>` before first paint.
+
+```swift
+page.theme = .auto
+Button("Toggle dark mode", onClick: .toggleTheme, style: .secondary, .small)
+```
 
 ## AJAX forms with Swifter
 
@@ -338,7 +356,7 @@ server.post["contact"] = { request, _ in
         return .ok(.js(response))
     }
     // ... persist input ...
-    response.add(.showSuccess("Thanks, \(input.name.htmlEscaped.jsEscaped)!"))
+    response.add(.showSuccess("Thanks, \(input.name.htmlEscaped)!"))
     response.add(.custom(code: "$('#contactForm')[0].reset();"))
     return .ok(.js(response))
 }
@@ -449,5 +467,5 @@ Do not copy `.env` files or secrets into the image; pass them as environment var
 3. For AJAX forms: `ajax: true`, POST route, response is JavaScript (`.ok(.js(JSResponse(...)))`), give the form and fields explicit ids.
 4. Use selectors with `#` in `loadHtml`/`loadHtmlAndJS`.
 5. Never call `JSCode.submitForm`.
-6. Escape untrusted data for HTML and JavaScript contexts; never pass untrusted input to `addRaw(html:)` or `.custom(code:)`.
+6. Escape untrusted data for HTML contexts (`htmlEscaped`); `JSCode` string arguments are JS-escaped automatically. Never pass untrusted input to `addRaw(html:)`, `.custom(code:)` or `.setHtml/.appendHtml`.
 7. Prefer `Template` files in `Resources/templates/` over large inline HTML strings.
