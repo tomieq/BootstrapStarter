@@ -17,6 +17,7 @@ It is built on top of [Template.swift](https://github.com/tomieq/Template.swift)
 | `Table` / `TableCell` / `TableColumn` | Bootstrap table builder |
 | `Button` | Bootstrap button or link-button, usable anywhere |
 | `Icon` | Bootstrap Icons glyph (pinned bundled snapshot; opt-in via `page.addIcons()`) |
+| `Navbar` / `Sidebar` / `MenuItem` | Top bar and vertical menu from one `[MenuItem]` list |
 | `Tabs` | Bootstrap tabs/pills with optional lazy-loaded panes |
 | `ListGroup` / `ListGroupItem` | Bootstrap list group: plain, link or button items, badges |
 | `Badge` | Bootstrap badge (`ContextColor`, optional pill) |
@@ -235,6 +236,38 @@ ListGroup(id: "folders")
 - Container is `<ul>`/`<ol>` for plain-only lists; any link or button item switches it to `<div>` (Bootstrap requirement).
 - Options: `flush`, `numbered`, `horizontal`, `id`.
 - `Badge(_:color:pill:)` standalone: `TableCell(Badge("New", color: .success))`; text is escaped.
+
+## Navbar and Sidebar
+
+Define the menu once as `[MenuItem]` and render it as a `Navbar`, a `Sidebar`, or both.
+
+```swift
+func menu() -> [MenuItem] {
+    [
+        .link("Dashboard", url: "/", icon: .home),
+        .link("Users", url: "/users", icon: .people, badge: Badge(12, pill: true), matchPrefix: true),
+        .dropdown("Reports", icon: .chart, items: [
+            .header("Sales"), .link("Daily", url: "/reports/daily"), .divider,
+            .action("Export", onClick: .loadModal(path: "/reports/export"))
+        ]),
+        .link("Settings", url: "/settings", icon: .settings).atEnd(),                 // right in a navbar, bottom in a sidebar
+        .dropdown("Account", icon: .person, items: [.link("Log out", url: "/logout")]).atEnd()
+    ]
+}
+
+let navbar = Navbar(brand: "Acme", items: menu(), currentPath: request.path, style: .dark)   // expand: .lg, position, fluid, id
+page.addIcons()
+page.body = "\(navbar)<main class=\"container py-4\">\(content)</main>"
+
+let sidebar = Sidebar(brand: "Acme", items: menu(), currentPath: request.path)                // width: 280
+page.body = "<div class=\"d-flex min-vh-100\">\(sidebar)<main class=\"flex-grow-1 p-4\">\(content)</main></div>"
+```
+
+- Items: `.link(_:url:icon:badge:active:disabled:matchPrefix:)`, `.action(_:onClick:...)` (runs a `JSCode`), `.dropdown(_:icon:items:)`, `.header(_:)`, `.divider`, `.raw(html)` (unescaped), `item.atEnd()`.
+- Active item: pass `currentPath` (the request path). A link matches when its URL equals the path (query/fragment/trailing slash ignored); `matchPrefix: true` also matches below it (`/users` for `/users/5`; root `/` never prefix-matches); `active: true` forces it. A dropdown/group is active (a sidebar group opens) when a child is.
+- Navbar: `style` `.default/.dark/.primary`, `expand` breakpoint for the collapse toggle (default `.lg`), `position` `.normal/.stickyTop/.fixedTop` (add body padding for fixed), `fluid`. `atEnd()` items go right and open dropdowns leftwards. Several navbars on a page need distinct `id`s.
+- Sidebar: fixed width (pixels), pills, dropdowns become collapsible groups (nested to any depth), `atEnd()` items pinned to the bottom. It is NOT responsive and does not lay out the page: wrap it in a `d-flex` row beside the content.
+- Nested dropdowns inside a navbar dropdown are flattened to a header plus items. Titles/URLs/ids are escaped; icons need `page.addIcons()`.
 
 ## Tabs
 

@@ -26,7 +26,7 @@ Sources/<App>/
   Flows/
     Flow.swift                # protocol Flow { func register(on server: HttpServer) }
     <Module>Flow.swift        # one class per module
-  Extensions/                 # small helpers: WebPath+URL, BootstrapTemplate+Portal (shared page shell)
+  Extensions/                 # small helpers: WebPath+URL, BootstrapTemplate+Portal (shared page shell: build the `[MenuItem]` menu once here and render it with `Navbar`/`Sidebar`, passing the request path as `currentPath`)
 ```
 
 Run from the directory containing `Resources/` (`swift run` from the project root).

@@ -15,6 +15,7 @@ It bundles Bootstrap 5.3.1, Bootstrap Icons 1.13.1, jQuery 3.6.1, jQuery UI 1.13
 - [Build tables](#build-tables)
 - [Paginate](#paginate)
 - [Modals](#modals)
+- [Navigation](#navigation)
 - [Tabs](#tabs)
 - [List groups and badges](#list-groups-and-badges)
 - [Icons](#icons)
@@ -64,6 +65,8 @@ The package does not require a specific HTTP framework. The examples use Swifter
 | `BootstrapTemplate` | Full HTML document with bundled CSS and scripts | `CustomStringConvertible` |
 | `Form` | Bootstrap-styled HTML form builder | `CustomStringConvertible` |
 | `Button` | Bootstrap button or link-button | `CustomStringConvertible` |
+| `Navbar` | Top navigation bar from a `[MenuItem]` list | `CustomStringConvertible` |
+| `Sidebar` | Vertical navigation from a `[MenuItem]` list | `CustomStringConvertible` |
 | `Tabs` | Bootstrap tabs or pills, with lazy-loaded panes | `CustomStringConvertible` |
 | `ListGroup` | Bootstrap list group: plain, linked or actionable items | `CustomStringConvertible` |
 | `Badge` | Bootstrap badge | `CustomStringConvertible` |
@@ -471,6 +474,77 @@ Button("Delete",
 - Defaults: title `"Confirm"`, labels `"OK"` and `"Cancel"`.
 - Opening a new confirmation replaces a pending one.
 
+## Navigation
+
+`Navbar` and `Sidebar` render the same `[MenuItem]` list, so a site's menu is defined once and shown as a top bar, a side menu, or both.
+
+```swift
+func menu() -> [MenuItem] {
+    [
+        .link("Dashboard", url: "/", icon: .home),
+        .link("Users", url: "/users", icon: .people, badge: Badge(12, pill: true), matchPrefix: true),
+        .dropdown("Reports", icon: .chart, items: [
+            .header("Sales"),
+            .link("Daily", url: "/reports/daily"),
+            .link("Monthly", url: "/reports/monthly"),
+            .divider,
+            .action("Export", onClick: .loadModal(path: "/reports/export"))
+        ]),
+        .link("Settings", url: "/settings", icon: .settings).atEnd(),
+        .dropdown("Account", icon: .person, items: [
+            .link("Profile", url: "/profile"),
+            .link("Log out", url: "/logout", icon: .logout)
+        ]).atEnd()
+    ]
+}
+
+let navbar = Navbar(brand: "Acme", brandIcon: .home, items: menu(), currentPath: request.path, style: .dark)
+page.addIcons()
+page.body = "\(navbar)<main class=\"container py-4\">\(content)</main>"
+```
+
+### `MenuItem`
+
+| Item | Rendered as |
+| --- | --- |
+| `.link(_:url:icon:badge:active:disabled:matchPrefix:)` | A link. |
+| `.action(_:onClick:icon:badge:active:disabled:)` | A button that runs a `JSCode`, for example `.loadModal`, `.confirm` or `.toggleTheme`. |
+| `.dropdown(_:icon:items:disabled:)` | A dropdown menu in a navbar, a collapsible group in a sidebar. |
+| `.header(_:)` | A caption: dropdown header, sidebar section title, plain text in a navbar. |
+| `.divider` | A separator in dropdowns and sidebars; ignored at the top level of a navbar. |
+| `.raw(_:)` | HTML inserted as is, for example a search form. Escape it yourself. |
+| `item.atEnd()` | Moves the item to the right of a navbar or to the bottom of a sidebar. Ignored inside dropdowns. |
+
+- **Active item:** pass the request path as `currentPath`. A link is active when its URL equals the path (query string, fragment and trailing slash are ignored). With `matchPrefix: true` it is also active below its URL (`/users` for `/users/5`; a root `/` link never prefix-matches). `active: true` forces it. A dropdown or group is active, and a sidebar group opened, when one of its items is.
+- **Dropdowns inside dropdowns** are not supported by Bootstrap; a nested dropdown is flattened into a header followed by its items. In a sidebar groups can be nested to any depth.
+- Titles, URLs and ids are escaped. Icons need `addIcons()`. A `badge` is shown after the title in a navbar and pushed to the far side in dropdowns and sidebars.
+
+### `Navbar`
+
+`Navbar(id:brand:brandURL:brandIcon:items:currentPath:style:expand:position:fluid:)`
+
+- `style`: `.default` (follows the page's color mode), `.dark` or `.primary`.
+- `expand` (`.sm` to `.xxl`, default `.lg`): below this breakpoint the items collapse behind a toggle button. The toggle uses Bootstrap's collapse, which is part of the bundled scripts.
+- `position`: `.normal`, `.stickyTop`, or `.fixedTop` (add top padding to the page body yourself, as the bar leaves the document flow).
+- `fluid`: full-width (`container-fluid`, default) or fixed-width `container`.
+- `id` (default `"navbar"`) must be unique if a page has several navbars; the collapsing part gets `<id>-collapse`.
+- Items marked `atEnd()` are right-aligned, and their dropdown menus open towards the left.
+
+### `Sidebar`
+
+`Sidebar(id:brand:brandURL:brandIcon:items:currentPath:style:width:)`
+
+```swift
+let sidebar = Sidebar(brand: "Acme", items: menu(), currentPath: request.path)
+page.body = "<div class=\"d-flex min-vh-100\">\(sidebar)<main class=\"flex-grow-1 p-4\">\(content)</main></div>"
+```
+
+- A fixed-width (`width` pixels, default 280) vertical menu using Bootstrap pills. It does not lay out the page: put it next to the content in a flex row, as above, and it stretches to the row's height.
+- Dropdowns become collapsible groups. The group containing the active item starts open.
+- Items marked `atEnd()` are pinned to the bottom, below a divider.
+- `style`: `.default`, `.dark` or `.primary`.
+- It is not responsive: it is always visible. For small screens use a `Navbar`, or hide the sidebar with `d-none d-lg-flex` around it.
+
 ## Tabs
 
 `Tabs` renders Bootstrap tabs (or pills) with their panes. Every `add...` returns the same `Tabs`.
@@ -812,6 +886,35 @@ public class Tabs: CustomStringConvertible {
 }
 public enum TabsStyle { case tabs, pills, underline }
 
+public enum NavStyle { case `default`, dark, primary }
+public enum Breakpoint: String { case sm, md, lg, xl, xxl }
+public enum NavbarPosition { case normal, fixedTop, stickyTop }
+
+public struct MenuItem {
+    public static func link(_ title: String, url: String, icon: Icon? = nil, badge: Badge? = nil,
+                            active: Bool = false, disabled: Bool = false, matchPrefix: Bool = false) -> MenuItem
+    public static func action(_ title: String, onClick: JSCode, icon: Icon? = nil, badge: Badge? = nil,
+                              active: Bool = false, disabled: Bool = false) -> MenuItem
+    public static func dropdown(_ title: String, icon: Icon? = nil, items: [MenuItem], disabled: Bool = false) -> MenuItem
+    public static var divider: MenuItem { get }
+    public static func header(_ title: String) -> MenuItem
+    public static func raw(_ html: CustomStringConvertible) -> MenuItem
+    public func atEnd() -> MenuItem
+}
+
+public struct Navbar: CustomStringConvertible {
+    public init(id: String = "navbar", brand: String? = nil, brandURL: String = "/", brandIcon: Icon? = nil,
+                items: [MenuItem], currentPath: String? = nil, style: NavStyle = .default,
+                expand: Breakpoint = .lg, position: NavbarPosition = .normal, fluid: Bool = true)
+    public var output: String { get }
+}
+
+public struct Sidebar: CustomStringConvertible {
+    public init(id: String = "sidebar", brand: String? = nil, brandURL: String = "/", brandIcon: Icon? = nil,
+                items: [MenuItem], currentPath: String? = nil, style: NavStyle = .default, width: Int = 280)
+    public var output: String { get }
+}
+
 public enum ContextColor: String { case primary, secondary, success, danger, warning, info, light, dark }
 
 public struct Badge: CustomStringConvertible {
@@ -867,7 +970,7 @@ Properties not shown as public in this list are implementation details. In parti
 When modifying an application that uses this package:
 
 1. Import `BootstrapTemplate`, not the repository name.
-2. Treat `BootstrapTemplate`, `Form`, `Button`, `Icon`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `ConfirmDialog`, `Tabs`, `ListGroup`, `Badge`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
+2. Treat `BootstrapTemplate`, `Form`, `Button`, `Icon`, `Table`, `TableCell`, `TableColumn`, `Pagination`, `Modal`, `ConfirmDialog`, `Tabs`, `ListGroup`, `Badge`, `Navbar`, `Sidebar`, `MenuItem`, `JSCode`, `JSResponse`, `FormRadioModel`, `FormSelectModel`, `ButtonStyle`, `String.htmlEscaped`, and `String.jsEscaped` as the public API. Do not rely on package-internal template structures or helper implementation details unless the application explicitly owns that integration. Do not redefine `htmlEscaped` or `jsEscaped` in the application.
 3. Preserve static serving for `BootstrapTemplate.absolutePath(for:)`; without it, every generated page is missing its bundled CSS and JavaScript.
 4. Use a CSS selector such as `"#content"` for `JSCode.loadHtml` and `JSCode.loadHtmlAndJS` target arguments.
 5. Prefer explicit form IDs when any client code needs to select fields. Generated IDs are intentionally non-deterministic.
