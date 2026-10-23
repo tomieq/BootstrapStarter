@@ -32,6 +32,13 @@
         <input type="{type}" class="form-control" id="{id}" value="{value}" name="{name}" {attributes}>
       </div>
     [END input]
+    [START file]
+      <div class="mb-3">
+        <label for="{id}" class="form-label">{label}</label>
+        <input type="file" class="form-control" id="{id}" name="{name}" {attributes}>
+        {progress}
+      </div>
+    [END file]
     [START textarea]
       <div class="mb-3">
         <label for="{id}" class="form-label">{label}</label>

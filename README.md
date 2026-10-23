@@ -221,7 +221,7 @@ Form(url: String, method: String, ajax: Bool = false, attributes: [String: Strin
 - `url` becomes the form `action`.
 - `method` becomes the HTML form `method`.
 - `attributes` are appended to the opening `<form>` tag.
-- With `ajax: true`, an `onsubmit` handler prevents the browser's native submit and calls the bundled `submitFormInBackground` helper. That helper always sends a `POST` request and expects a JavaScript response (`dataType: "script"`), regardless of `method`.
+- With `ajax: true`, an `onsubmit` handler prevents the browser's native submit and calls the bundled `submitFormInBackground` helper. That helper always sends a `POST` request and expects a JavaScript response (`dataType: "script"`), regardless of `method`. Forms that contain a file field use `uploadFormInBackground` instead; see [File uploads](#file-uploads).
 
 ### Field API
 
@@ -237,6 +237,7 @@ Form(url: String, method: String, ajax: Bool = false, attributes: [String: Strin
 | `addDependentSelect(name:label:dependsOn:optionsPath:options:selected:id:attributes:)` | A select whose options are reloaded from the server when another field changes; see [Dependent selects](#dependent-selects). |
 | `addDate(...)`, `addTime(...)`, `addDateTime(...)` | Native date, time and date-time inputs; see [Date and time inputs](#date-and-time-inputs). |
 | `addAutocomplete(name:label:source:value:minLength:id:attributes:)` | Text input with server-backed suggestions; see [Autocomplete](#autocomplete). |
+| `addFile(name:label:accept:multiple:maxSize:id:attributes:)` | File input; makes the form multipart and, with `ajax: true`, uploads it with a progress bar; see [File uploads](#file-uploads). |
 | `addSubmit(name:label:icon:style:)` | Adds a submit button, optionally with an [`Icon`](#icons) before the label. Omitting `style` uses `.primary`. |
 | `addSeparator(txt:)` | Adds a labelled section wrapper. |
 | `addRaw(html:)` | Appends HTML verbatim. |
@@ -301,6 +302,39 @@ server.get["regions"] = { request, _ in
 - While loading, the select is disabled. A previously selected value is kept if it exists in the new options, otherwise the first option is selected. A `change` event is then fired, so chains (country, region, city) work when each level has an explicit `id`.
 - Only the latest request counts, so quick successive changes cannot apply stale options. A failed request shows an error toast and leaves the old options.
 - The initial options come from `options:`; nothing is requested until the watched field changes. The parent can be any field with an `id` and a value (select or input).
+
+### File uploads
+
+`addFile` adds a Bootstrap file input. As soon as a form contains one, the form gets `enctype="multipart/form-data"` (unless you set your own `enctype` attribute). Use `method: "POST"`.
+
+```swift
+Form(url: "/upload", method: "POST", ajax: true, attributes: ["id": "uploadForm"])
+    .addInputText(name: "title", label: "Title", id: "title")
+    .addFile(name: "photos", label: "Photos", accept: "image/*", multiple: true, maxSize: 10 * 1024 * 1024, id: "photos")
+    .addSubmit(name: "send", label: "Upload", icon: .upload)
+```
+
+- **Plain form:** without `ajax`, the browser performs a normal multipart POST and the response replaces the page.
+- **`ajax: true`:** the form is sent in the background as `FormData` (`uploadFormInBackground` in the bundled `form.js`), with a Bootstrap progress bar under the first file field showing the percentage of bytes sent. Submit buttons are disabled during the upload. The response is JavaScript and is executed, exactly as for other AJAX forms, so reply with a `JSResponse`. A failed request shows an error toast (a `413` status reports that the upload is too large).
+- `accept` is a hint for the file picker (`"image/*"`, `".pdf,.docx"`). `multiple: true` allows several files.
+- `maxSize` (bytes, per file) is checked in the browser before anything is sent and is a convenience only. Always validate size, type and name on the server.
+- The progress bar tracks the whole request, including the other fields. It reaches 100% when the data is sent, then stays striped until the server responds.
+- There is no cancel button, and uploads are not resumable.
+
+Server side with Swifter (the multipart parts expose `name`, `fileName`, `headers` and `body`):
+
+```swift
+server.post["upload"] = { request, _ in
+    for part in request.multiPart {
+        guard let fileName = part.fileName, !fileName.isEmpty else { continue }   // empty file inputs arrive as empty parts
+        // Never use `fileName` as a path; generate your own storage name and check the size and type.
+        store(part.body, originalName: fileName)
+    }
+    return .ok(.js(JSResponse(.showSuccess("Uploaded", icon: .check))))
+}
+```
+
+Text fields of a multipart form are parts as well (`request.formData` is only filled for urlencoded bodies), so read them from `request.multiPart` by `name`. Swifter limits the request body size; raise that limit in the server configuration if you accept large files.
 
 ### Form compatibility notes
 
@@ -644,6 +678,9 @@ public class Form: CustomStringConvertible {
         attributes: [String: String] = [:]) -> Form          // addTime, addDateTime: same signature
     @discardableResult public func addAutocomplete(name: String, label: String, source: String,
         value: String = "", minLength: Int = 2, id: String? = nil,
+        attributes: [String: String] = [:]) -> Form
+    @discardableResult public func addFile(name: String, label: String, accept: String? = nil,
+        multiple: Bool = false, maxSize: Int? = nil, id: String? = nil,
         attributes: [String: String] = [:]) -> Form
     @discardableResult public func addTextarea(name: String, label: String,
         rows: Int = 3, value: CustomStringConvertible? = nil, id: String? = nil,

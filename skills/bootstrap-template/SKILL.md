@@ -183,6 +183,27 @@ Form(url: "/booking", method: "POST", ajax: true)
 - `addAutocomplete`: jQuery UI autocomplete bound on first focus (works in modals/tabs/fragments). The endpoint gets `?term=<text>` and returns JSON: array of strings or of `{label, value}`. The field stays free text.
 - `addDependentSelect`: when the field with id `dependsOn` changes, GET `optionsPath?<parentName>=<value>` and replace the options with the response. The endpoint must return `<option>` elements: `.ok(.html(FormSelectModel.optionsHTML(options)))`. The select is disabled while loading, keeps its value if still present, fires `change` (chains work if each level has an explicit `id`), only the latest request applies, errors show a toast. Initial options come from `options:`; nothing loads until the parent changes. The parent field needs an explicit `id`.
 
+### File upload
+
+```swift
+Form(url: "/upload", method: "POST", ajax: true)
+    .addFile(name: "photos", label: "Photos", accept: "image/*", multiple: true, maxSize: 10 * 1024 * 1024, id: "photos")
+    .addSubmit(name: "send", label: "Upload", icon: .upload)
+
+// Swifter: multipart parts expose name, fileName, headers, body
+server.post["upload"] = { request, _ in
+    for part in request.multiPart {
+        guard let fileName = part.fileName, !fileName.isEmpty else { continue }   // empty file inputs arrive as empty parts
+        store(part.body, originalName: fileName)       // never use fileName as a path
+    }
+    return .ok(.js(JSResponse(.showSuccess("Uploaded", icon: .check))))
+}
+```
+
+- A form with `addFile` automatically gets `enctype="multipart/form-data"` (use POST). Without `ajax` it is a normal browser multipart POST.
+- With `ajax: true` it is sent in the background as `FormData` (`uploadFormInBackground`) with a Bootstrap progress bar under the first file field (percentage of bytes sent); submit buttons are disabled meanwhile; the response is JavaScript (`JSResponse`) as for other AJAX forms; HTTP 413 shows "too large".
+- `maxSize` (bytes per file) is only a client-side check; validate size, type and name on the server. `request.formData` is not filled for multipart bodies: read text fields from `request.multiPart` by `name`. No cancel button, no resumable uploads.
+
 ## Button
 
 `Button` is a value type that renders to HTML (`CustomStringConvertible`, `.output`). Label, URL, `onClick` code and attribute values are HTML-escaped.

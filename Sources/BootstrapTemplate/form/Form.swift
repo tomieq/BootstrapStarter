@@ -11,6 +11,7 @@ import Template
 public class Form {
     let template: Template
     var html: String
+    private var hasFileField = false
     let method: String
     let url: String
     let ajax: Bool
@@ -245,6 +246,33 @@ public class Form {
         return self
     }
     
+    // File input. Makes the form multipart; with `ajax: true` it is uploaded in the background with a progress bar
+    // (shown under the first file field). `maxSize` (bytes) is only a client-side check; validate on the server too.
+    @discardableResult
+    public func addFile(name: String,
+                        label: String,
+                        accept: String? = nil,
+                        multiple: Bool = false,
+                        maxSize: Int? = nil,
+                        id: String? = nil,
+                        attributes: [String:String] = [:]) -> Form {
+        var attributes = attributes
+        attributes["accept"] = accept?.htmlEscaped
+        attributes["multiple"] = multiple ? "multiple" : nil
+        attributes["data-max-size"] = maxSize.map { "\($0)" }
+        var variables = TemplateVariables()
+        variables["label"] = label
+        variables["id"] = id ?? self.randomString(length: 10)
+        variables["name"] = name
+        variables["attributes"] = makeAttributes(attributes)
+        variables["progress"] = self.hasFileField ? "" : "<div class=\"progress mt-2 d-none\" data-upload-progress role=\"progressbar\" aria-label=\"Upload progress\" aria-valuenow=\"0\" aria-valuemin=\"0\" aria-valuemax=\"100\"><div class=\"progress-bar\" style=\"width: 0%\">0%</div></div>"
+        self.hasFileField = true
+        self.template.assign(variables, inNest: "file")
+        self.html.append(self.template.output)
+        self.template.reset()
+        return self
+    }
+    
     // Text input with suggestions (jQuery UI autocomplete). `source` is queried with `?term=<text>` and must
     // return a JSON array of strings or of objects with `label` and `value`.
     @discardableResult
@@ -308,8 +336,12 @@ public class Form {
         variables["url"] = self.url
         
         var attributes = self.formAttributes
+        if self.hasFileField {
+            attributes["enctype"] = attributes["enctype"] ?? "multipart/form-data"
+        }
         if self.ajax {
-            attributes["onsubmit"] = "event.preventDefault(); submitFormInBackground('\(url)', this);"
+            let function = self.hasFileField ? "uploadFormInBackground" : "submitFormInBackground"
+            attributes["onsubmit"] = "event.preventDefault(); \(function)('\(url.jsEscaped)', this);".htmlEscaped
         }
         variables["attributes"] = makeAttributes(attributes)
         self.template.assign(variables, inNest: "form")
